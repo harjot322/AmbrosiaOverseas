@@ -1,0 +1,132 @@
+import Link from "next/link"
+import { Mail, Phone, MapPin, Facebook, Instagram, Twitter } from "lucide-react"
+
+import { Logo } from "@/components/logo"
+
+export function Footer() {
+  return (
+    <footer className="bg-black text-white pt-16 pb-8">
+      <div className="container">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="space-y-4">
+            <Logo />
+            <p className="text-muted-foreground max-w-xs">
+              Premium imported food products from around the world, bringing global flavors to your doorstep.
+            </p>
+            <div className="flex space-x-4">
+              <Link href="#" className="text-muted-foreground hover:text-primary transition-colors">
+                <Facebook className="h-5 w-5" />
+                <span className="sr-only">Facebook</span>
+              </Link>
+              <Link href="#" className="text-muted-foreground hover:text-primary transition-colors">
+                <Instagram className="h-5 w-5" />
+                <span className="sr-only">Instagram</span>
+              </Link>
+              <Link href="#" className="text-muted-foreground hover:text-primary transition-colors">
+                <Twitter className="h-5 w-5" />
+                <span className="sr-only">Twitter</span>
+              </Link>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-lg mb-4 gold-text">Quick Links</h3>
+            <ul className="space-y-2">
+              <li>
+                <Link href="/" className="text-muted-foreground hover:text-primary transition-colors">
+                  Home
+                </Link>
+              </li>
+              <li>
+                <Link href="/products" className="text-muted-foreground hover:text-primary transition-colors">
+                  Products
+                </Link>
+              </li>
+              <li>
+                <Link href="/about" className="text-muted-foreground hover:text-primary transition-colors">
+                  About Us
+                </Link>
+              </li>
+              <li>
+                <Link href="/contact" className="text-muted-foreground hover:text-primary transition-colors">
+                  Contact
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-lg mb-4 gold-text">Categories</h3>
+            <ul className="space-y-2">
+              <li>
+                <Link
+                  href="/products?category=beverages"
+                  className="text-muted-foreground hover:text-primary transition-colors"
+                >
+                  Beverages
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/products?category=snacks"
+                  className="text-muted-foreground hover:text-primary transition-colors"
+                >
+                  Snacks
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/products?category=cookies"
+                  className="text-muted-foreground hover:text-primary transition-colors"
+                >
+                  Cookies & Muffins
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/products?category=cereals"
+                  className="text-muted-foreground hover:text-primary transition-colors"
+                >
+                  Breakfast Cereals
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/products?tag=exclusive"
+                  className="text-muted-foreground hover:text-primary transition-colors"
+                >
+                  Ambrosia Overseas Exclusive
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-lg mb-4 gold-text">Contact Us</h3>
+            <ul className="space-y-4">
+              <li className="flex items-start gap-3">
+                <MapPin className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                <span className="text-muted-foreground">
+                  Ambrosia Overseas, 4420 Gali Bahu Ji, Sadar Bazar Delhi-110006
+                </span>
+              </li>
+              <li className="flex items-center gap-3">
+                <Phone className="h-5 w-5 text-primary shrink-0" />
+                <span className="text-muted-foreground">+91 8287587442</span>
+              </li>
+              <li className="flex items-center gap-3">
+                <Mail className="h-5 w-5 text-primary shrink-0" />
+                <span className="text-muted-foreground">ambrosiaoverseas.an@gmail.com</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="border-t border-muted/20 mt-12 pt-8 text-center text-muted-foreground">
+          <p>© {new Date().getFullYear()} Ambrosia Overseas. All rights reserved. Owned by Ayansh Jaiswal.</p>
+        </div>
+      </div>
+    </footer>
+  )
+}
+
