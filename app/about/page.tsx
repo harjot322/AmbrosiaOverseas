@@ -33,7 +33,7 @@ export default function AboutPage() {
           <div className="container px-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <div className="relative h-[400px] rounded-lg overflow-hidden">
-                <Image src="/aboutus.png?height=800&width=800" alt="Our Story" fill className="object-cover" />
+                <Image src="/AmbrosiaOverseas.png?height=800&width=800" alt="Our Story" fill className="object-cover" />
               </div>
 
               <div className="space-y-6">
