@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+
 import {
   BarChart,
   Bar,
@@ -22,16 +23,30 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 
+interface Analytics {
+  pageViewsByMonth: { _id: { month: number; year: number }; count: number }[]
+  pageViewsByPage: { _id: string; count: number }[]
+  topProducts: { _id: string; name: string; views: number; price: number }[]
+}
+
+interface Stats {
+  products: { count: number; change: number }
+  users: { count: number; change: number }
+  pageViews: { count: number; change: number }
+  interactions: { count: number; change: number }
+}
+
 export default function AdminDashboard() {
   const { toast } = useToast()
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [period, setPeriod] = useState("last_month")
-  const [analytics, setAnalytics] = useState({
-    pageViewsByDate: [],
+  const [analytics, setAnalytics] = useState<Analytics>({
+    pageViewsByMonth: [],
     pageViewsByPage: [],
+    topProducts: [],
   })
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<Stats>({
     products: { count: 0, change: 0 },
     users: { count: 0, change: 0 },
     pageViews: { count: 0, change: 0 },
@@ -105,25 +120,30 @@ export default function AdminDashboard() {
   }
 
   // Format data for charts
-  const formatPageViewsData = () => {
-    if (!analytics.pageViewsByDate || analytics.pageViewsByDate.length === 0) {
+  const formatMonthlyViewsData = () => {
+    if (!analytics.pageViewsByMonth || analytics.pageViewsByMonth.length === 0) {
       return []
     }
 
-    return analytics.pageViewsByDate.map((item) => ({
-      date: `${item._id.month}/${item._id.day}`,
-      views: item.count,
-    }))
+    return analytics.pageViewsByMonth.map((item) => {
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+      const monthName = monthNames[item._id.month - 1]
+      return {
+        date: `${monthName} ${item._id.year}`,
+        views: item.count,
+      }
+    })
   }
 
-  const formatPagesByViewsData = () => {
-    if (!analytics.pageViewsByPage || analytics.pageViewsByPage.length === 0) {
+  const formatTopProductsData = () => {
+    if (!analytics.topProducts || analytics.topProducts.length === 0) {
       return []
     }
 
-    return analytics.pageViewsByPage.slice(0, 5).map((item) => ({
-      name: item._id.length > 20 ? item._id.substring(0, 20) + "..." : item._id,
-      views: item.count,
+    return analytics.topProducts.map((item) => ({
+      name: item.name.length > 20 ? item.name.substring(0, 20) + "..." : item.name,
+      views: item.views,
+      price: item.price,
     }))
   }
 
@@ -281,11 +301,11 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card className="col-span-1">
               <CardHeader>
-                <CardTitle>Website Visits</CardTitle>
+                <CardTitle>Website Visits by Month</CardTitle>
               </CardHeader>
               <CardContent className="pl-2">
                 <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={formatPageViewsData()}>
+                  <LineChart data={formatMonthlyViewsData()}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="date" />
                     <YAxis />
@@ -326,11 +346,11 @@ export default function AdminDashboard() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Top Pages by Views</CardTitle>
+              <CardTitle>Top Products by Views</CardTitle>
             </CardHeader>
             <CardContent className="pl-2">
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={formatPagesByViewsData()}>
+                <BarChart data={formatTopProductsData()}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
                   <YAxis />
@@ -352,7 +372,7 @@ export default function AdminDashboard() {
                 <div className="flex items-center justify-center h-64">
                   <p className="text-muted-foreground">Loading analytics data...</p>
                 </div>
-              ) : analytics.pageViewsByDate.length === 0 ? (
+              ) : analytics.pageViewsByMonth.length === 0 ? (
                 <div className="flex items-center justify-center h-64">
                   <p className="text-muted-foreground">No analytics data available for the selected period.</p>
                 </div>
@@ -361,7 +381,7 @@ export default function AdminDashboard() {
                   <div>
                     <h3 className="text-lg font-medium mb-4">Page Views Over Time</h3>
                     <ResponsiveContainer width="100%" height={300}>
-                      <LineChart data={formatPageViewsData()}>
+                      <LineChart data={formatMonthlyViewsData()}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="date" />
                         <YAxis />
@@ -372,9 +392,9 @@ export default function AdminDashboard() {
                   </div>
 
                   <div>
-                    <h3 className="text-lg font-medium mb-4">Most Viewed Pages</h3>
+                    <h3 className="text-lg font-medium mb-4">Top Products by Views</h3>
                     <ResponsiveContainer width="100%" height={300}>
-                      <BarChart data={formatPagesByViewsData()}>
+                      <BarChart data={formatTopProductsData()}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="name" />
                         <YAxis />
@@ -397,9 +417,9 @@ export default function AdminDashboard() {
             <CardContent>
               <div className="space-y-8">
                 <div>
-                  <h3 className="text-lg font-medium mb-4">Top Selling Products</h3>
+                  <h3 className="text-lg font-medium mb-4">Top Products by Views</h3>
                   <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={formatPagesByViewsData()}>
+                    <BarChart data={formatTopProductsData()}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="name" />
                       <YAxis />
@@ -439,4 +459,3 @@ export default function AdminDashboard() {
     </div>
   )
 }
-

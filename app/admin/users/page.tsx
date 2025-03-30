@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Plus, Edit, Trash2, Search, Filter, ArrowUpDown, MoreHorizontal, Eye, UserCog } from "lucide-react"
-
+import { User } from "@/types/types" 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -23,15 +23,18 @@ import { format } from "date-fns"
 
 export default function UsersPage() {
   const { toast } = useToast()
-  const [users, setUsers] = useState([])
+  const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
-  const [newUser, setNewUser] = useState({
+  const [newUser  , setNewUser  ] = useState<User>({
+    _id: "",
     name: "",
     email: "",
-    phone: "",
     password: "",
     role: "user",
+    phone: "",
+    createdAt: undefined,
+    updatedAt: undefined,
   })
 
   useEffect(() => {
@@ -56,7 +59,7 @@ export default function UsersPage() {
     }
   }
 
-  const handleCreateUser = async () => {
+  const handleCreateUser   = async () => {
     try {
       const response = await fetch("/api/users", {
         method: "POST",
@@ -72,16 +75,18 @@ export default function UsersPage() {
 
       toast({
         title: "Success",
-        description: "User created successfully",
+        description: "User   created successfully",
       })
 
       // Reset form and refresh users
-      setNewUser({
+      setNewUser  ({
+        _id: "",
         name: "",
         email: "",
-        phone: "",
         password: "",
         role: "user",
+        createdAt: undefined,
+        updatedAt: undefined,
       })
 
       fetchUsers()
@@ -95,7 +100,7 @@ export default function UsersPage() {
     }
   }
 
-  const handleDeleteUser = async (id) => {
+  const handleDeleteUser   = async (id: string) => {
     try {
       const response = await fetch(`/api/users/${id}`, {
         method: "DELETE",
@@ -107,7 +112,7 @@ export default function UsersPage() {
 
       toast({
         title: "Success",
-        description: "User deleted successfully",
+        description: "User   deleted successfully",
       })
 
       // Refresh users
@@ -152,8 +157,8 @@ export default function UsersPage() {
                 </label>
                 <Input
                   id="name"
-                  value={newUser.name}
-                  onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                  value={newUser  .name}
+                  onChange={(e) => setNewUser  ({ ...newUser  , name: e.target.value })}
                   placeholder="Enter full name"
                 />
               </div>
@@ -165,8 +170,8 @@ export default function UsersPage() {
                 <Input
                   id="email"
                   type="email"
-                  value={newUser.email}
-                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                  value={newUser  .email}
+                  onChange={(e) => setNewUser  ({ ...newUser  , email: e.target.value })}
                   placeholder="Enter email address"
                 />
               </div>
@@ -177,8 +182,8 @@ export default function UsersPage() {
                 </label>
                 <Input
                   id="phone"
-                  value={newUser.phone}
-                  onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
+                  value={newUser  .phone}
+                  onChange={(e) => setNewUser  ({ ...newUser  , phone: e.target.value })}
                   placeholder="Enter phone number"
                 />
               </div>
@@ -190,8 +195,8 @@ export default function UsersPage() {
                 <Input
                   id="password"
                   type="password"
-                  value={newUser.password}
-                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                  value={newUser  .password}
+                  onChange={(e) => setNewUser  ({ ...newUser  , password: e.target.value })}
                   placeholder="Enter password"
                 />
               </div>
@@ -200,12 +205,12 @@ export default function UsersPage() {
                 <label htmlFor="role" className="text-sm font-medium">
                   Role
                 </label>
-                <Select value={newUser.role} onValueChange={(value) => setNewUser({ ...newUser, role: value })}>
+                <Select value={newUser  .role} onValueChange={(value: "admin" | "user") => setNewUser  ({ ...newUser  , role: value })}>
                   <SelectTrigger id="role">
                     <SelectValue placeholder="Select role" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="user">User</SelectItem>
+                    <SelectItem value="user">User  </SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
                   </SelectContent>
                 </Select>
@@ -215,18 +220,20 @@ export default function UsersPage() {
               <Button
                 variant="outline"
                 onClick={() =>
-                  setNewUser({
+                  setNewUser  ({
+                    _id: "",
                     name: "",
                     email: "",
-                    phone: "",
                     password: "",
                     role: "user",
+                    createdAt: undefined,
+                    updatedAt: undefined,
                   })
                 }
               >
                 Cancel
               </Button>
-              <Button onClick={handleCreateUser}>Create User</Button>
+              <Button onClick={handleCreateUser  }>Create User</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -307,11 +314,11 @@ export default function UsersPage() {
                           Edit User
                         </DropdownMenuItem>
                         <DropdownMenuItem>
-                          <UserCog className="mr-2 h-4 w-4" />
+                        <UserCog className="mr-2 h-4 w-4" />
                           Change Role
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => handleDeleteUser(user._id)}
+                          onClick={() => handleDeleteUser  (user._id)}
                           className="text-destructive focus:text-destructive"
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
@@ -329,4 +336,3 @@ export default function UsersPage() {
     </div>
   )
 }
-

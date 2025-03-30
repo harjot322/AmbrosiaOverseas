@@ -52,4 +52,3 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     return NextResponse.json({ error: "Failed to delete product" }, { status: 500 })
   }
 }
-

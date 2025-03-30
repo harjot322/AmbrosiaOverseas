@@ -1,5 +1,4 @@
-"use client"
-
+"use client";
 import { useState, useEffect } from "react"
 import { format } from "date-fns"
 import { Mail, Eye, Trash2, Search, Filter, ArrowUpDown, RefreshCw } from "lucide-react"
@@ -17,13 +16,24 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 
+interface Message {
+  _id: string
+  name: string
+  email: string
+  subject: string
+  message: string
+  phone?: string
+  createdAt: Date
+  read: boolean
+}
+
 export default function MessagesPage() {
   const { toast } = useToast()
-  const [messages, setMessages] = useState([])
+  const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedMessage, setSelectedMessage] = useState(null)
+  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
 
   useEffect(() => {
     fetchMessages()
@@ -68,7 +78,7 @@ export default function MessagesPage() {
     })
   }
 
-  const handleViewMessage = async (message) => {
+  const handleViewMessage = async (message: Message) => {
     setSelectedMessage(message)
 
     // Mark as read if not already
@@ -88,7 +98,7 @@ export default function MessagesPage() {
     }
   }
 
-  const handleDeleteMessage = async (id) => {
+  const handleDeleteMessage = async (id: string) => {
     try {
       const response = await fetch(`/api/contact/${id}`, {
         method: "DELETE",
@@ -257,4 +267,3 @@ export default function MessagesPage() {
     </div>
   )
 }
-

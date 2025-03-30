@@ -1,5 +1,4 @@
-"use client"
-
+"use client";
 import { useState, useEffect } from "react"
 import { Plus, Edit, Trash2, LinkIcon, ExternalLink, ImageIcon } from "lucide-react"
 
@@ -10,6 +9,7 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
+import { Banner } from "@/types/types" 
 import {
   Dialog,
   DialogContent,
@@ -23,9 +23,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 export default function BannersPage() {
   const { toast } = useToast()
-  const [banners, setBanners] = useState([])
   const [loading, setLoading] = useState(true)
-  const [newBanner, setNewBanner] = useState({
+  const [banners, setBanners] = useState<Banner[]>([])
+  const [newBanner, setNewBanner] = useState<Omit<Banner, '_id'>>({
     title: "",
     subtitle: "",
     imageUrl: "",
@@ -33,7 +33,7 @@ export default function BannersPage() {
     position: "home_hero",
     isActive: true,
   })
-  const [editBanner, setEditBanner] = useState(null)
+  const [editBanner, setEditBanner] = useState<Banner | null>(null)
 
   useEffect(() => {
     fetchBanners()
@@ -98,13 +98,30 @@ export default function BannersPage() {
   }
 
   const handleUpdateBanner = async () => {
+    if (!editBanner) {
+      console.error("Error updating banner: editBanner is null")
+      toast({
+        title: "Error",
+        description: "Failed to update banner",
+        variant: "destructive",
+      })
+      return
+    }
+
     try {
       const response = await fetch(`/api/banners/${editBanner._id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(editBanner),
+        body: JSON.stringify({
+          title: editBanner.title,
+          subtitle: editBanner.subtitle,
+          imageUrl: editBanner.imageUrl,
+          linkUrl: editBanner.linkUrl,
+          position: editBanner.position,
+          isActive: editBanner.isActive,
+        }),
       })
 
       if (!response.ok) {
@@ -113,7 +130,7 @@ export default function BannersPage() {
 
       toast({
         title: "Success",
-        description: "Banner updated successfully",
+        description: `Banner "${editBanner.title}" updated successfully`,
       })
 
       setEditBanner(null)
@@ -128,7 +145,7 @@ export default function BannersPage() {
     }
   }
 
-  const handleDeleteBanner = async (id) => {
+  const handleDeleteBanner = async (id: string) => {
     try {
       const response = await fetch(`/api/banners/${id}`, {
         method: "DELETE",
@@ -190,7 +207,7 @@ export default function BannersPage() {
                   </label>
                   <Select
                     value={newBanner.position}
-                    onValueChange={(value) => setNewBanner({ ...newBanner, position: value })}
+                    onValueChange={(value) => setNewBanner({ ...newBanner, position: value as "home_hero" | "home_featured" | "products_top" | "about_page" })}
                   >
                     <SelectTrigger id="position">
                       <SelectValue placeholder="Select position" />
@@ -388,7 +405,7 @@ export default function BannersPage() {
                   </label>
                   <Select
                     value={editBanner.position}
-                    onValueChange={(value) => setEditBanner({ ...editBanner, position: value })}
+                    onValueChange={(value) => setEditBanner({ ...editBanner, position: value as "home_hero" | "home_featured" | "products_top" | "about_page" })}
                   >
                     <SelectTrigger id="edit-position">
                       <SelectValue placeholder="Select position" />
@@ -476,4 +493,3 @@ export default function BannersPage() {
     </div>
   )
 }
-

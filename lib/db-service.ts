@@ -1,5 +1,6 @@
 import { ObjectId } from "mongodb"
 import clientPromise from "./mongodb"
+import { Product, Category, Tag, User, Contact, Banner, Setting, Config, Analytics } from "@/types/types"
 
 // Database and collection names
 const DB_NAME = "ambrosia"
@@ -29,7 +30,12 @@ export async function getProducts(filters = {}) {
 
 export async function getProductById(id: string) {
   const db = await getDb()
-  return db.collection(COLLECTIONS.PRODUCTS).findOne({ _id: new ObjectId(id) })
+  try {
+    return db.collection(COLLECTIONS.PRODUCTS).findOne({ _id: new ObjectId(id) })
+  } catch (error) {
+    console.error("Error in getProductById:", error)
+    return null
+  }
 }
 
 export async function createProduct(productData: any) {
@@ -44,21 +50,31 @@ export async function createProduct(productData: any) {
 
 export async function updateProduct(id: string, productData: any) {
   const db = await getDb()
-  const result = await db.collection(COLLECTIONS.PRODUCTS).updateOne(
-    { _id: new ObjectId(id) },
-    {
-      $set: {
-        ...productData,
-        updatedAt: new Date(),
+  try {
+    const result = await db.collection(COLLECTIONS.PRODUCTS).updateOne(
+      { _id: new ObjectId(id) },
+      {
+        $set: {
+          ...productData,
+          updatedAt: new Date(),
+        },
       },
-    },
-  )
-  return result
+    )
+    return result
+  } catch (error) {
+    console.error("Error in updateProduct:", error)
+    throw error
+  }
 }
 
 export async function deleteProduct(id: string) {
   const db = await getDb()
-  return db.collection(COLLECTIONS.PRODUCTS).deleteOne({ _id: new ObjectId(id) })
+  try {
+    return db.collection(COLLECTIONS.PRODUCTS).deleteOne({ _id: new ObjectId(id) })
+  } catch (error) {
+    console.error("Error in deleteProduct:", error)
+    throw error
+  }
 }
 
 // Categories
@@ -69,7 +85,12 @@ export async function getCategories() {
 
 export async function getCategoryById(id: string) {
   const db = await getDb()
-  return db.collection(COLLECTIONS.CATEGORIES).findOne({ _id: new ObjectId(id) })
+  try {
+    return db.collection(COLLECTIONS.CATEGORIES).findOne({ _id: new ObjectId(id) })
+  } catch (error) {
+    console.error("Error in getCategoryById:", error)
+    return null
+  }
 }
 
 export async function createCategory(categoryData: any) {
@@ -83,15 +104,31 @@ export async function createCategory(categoryData: any) {
 
 export async function updateCategory(id: string, categoryData: any) {
   const db = await getDb()
-  const result = await db
-    .collection(COLLECTIONS.CATEGORIES)
-    .updateOne({ _id: new ObjectId(id) }, { $set: categoryData })
-  return result
+  try {
+    const result = await db.collection(COLLECTIONS.CATEGORIES).updateOne(
+      { _id: new ObjectId(id) },
+      {
+        $set: {
+          ...categoryData,
+          updatedAt: new Date(),
+        },
+      },
+    )
+    return result
+  } catch (error) {
+    console.error("Error in updateCategory:", error)
+    throw error
+  }
 }
 
 export async function deleteCategory(id: string) {
   const db = await getDb()
-  return db.collection(COLLECTIONS.CATEGORIES).deleteOne({ _id: new ObjectId(id) })
+  try {
+    return db.collection(COLLECTIONS.CATEGORIES).deleteOne({ _id: new ObjectId(id) })
+  } catch (error) {
+    console.error("Error in deleteCategory:", error)
+    throw error
+  }
 }
 
 // Tags
@@ -102,7 +139,12 @@ export async function getTags() {
 
 export async function getTagById(id: string) {
   const db = await getDb()
-  return db.collection(COLLECTIONS.TAGS).findOne({ _id: new ObjectId(id) })
+  try {
+    return db.collection(COLLECTIONS.TAGS).findOne({ _id: new ObjectId(id) })
+  } catch (error) {
+    console.error("Error in getTagById:", error)
+    return null
+  }
 }
 
 export async function createTag(tagData: any) {
@@ -116,13 +158,31 @@ export async function createTag(tagData: any) {
 
 export async function updateTag(id: string, tagData: any) {
   const db = await getDb()
-  const result = await db.collection(COLLECTIONS.TAGS).updateOne({ _id: new ObjectId(id) }, { $set: tagData })
-  return result
+  try {
+    const result = await db.collection(COLLECTIONS.TAGS).updateOne(
+      { _id: new ObjectId(id) },
+      {
+        $set: {
+          ...tagData,
+          updatedAt: new Date(),
+        },
+      },
+    )
+    return result
+  } catch (error) {
+    console.error("Error in updateTag:", error)
+    throw error
+  }
 }
 
 export async function deleteTag(id: string) {
   const db = await getDb()
-  return db.collection(COLLECTIONS.TAGS).deleteOne({ _id: new ObjectId(id) })
+  try {
+    return db.collection(COLLECTIONS.TAGS).deleteOne({ _id: new ObjectId(id) })
+  } catch (error) {
+    console.error("Error in deleteTag:", error)
+    throw error
+  }
 }
 
 // Users
@@ -133,7 +193,12 @@ export async function getUsers() {
 
 export async function getUserById(id: string) {
   const db = await getDb()
-  return db.collection(COLLECTIONS.USERS).findOne({ _id: new ObjectId(id) })
+  try {
+    return db.collection(COLLECTIONS.USERS).findOne({ _id: new ObjectId(id) })
+  } catch (error) {
+    console.error("Error in getUserById:", error)
+    return null
+  }
 }
 
 export async function getUserByEmail(email: string) {
@@ -152,13 +217,31 @@ export async function createUser(userData: any) {
 
 export async function updateUser(id: string, userData: any) {
   const db = await getDb()
-  const result = await db.collection(COLLECTIONS.USERS).updateOne({ _id: new ObjectId(id) }, { $set: userData })
-  return result
+  try {
+    const result = await db.collection(COLLECTIONS.USERS).updateOne(
+      { _id: new ObjectId(id) },
+      {
+        $set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      },
+    )
+    return result
+  } catch (error) {
+    console.error("Error in updateUser:", error)
+    throw error
+  }
 }
 
 export async function deleteUser(id: string) {
   const db = await getDb()
-  return db.collection(COLLECTIONS.USERS).deleteOne({ _id: new ObjectId(id) })
+  try {
+    return db.collection(COLLECTIONS.USERS).deleteOne({ _id: new ObjectId(id) })
+  } catch (error) {
+    console.error("Error in deleteUser:", error)
+    throw error
+  }
 }
 
 // Contact Messages
@@ -169,7 +252,12 @@ export async function getMessages() {
 
 export async function getMessageById(id: string) {
   const db = await getDb()
-  return db.collection(COLLECTIONS.CONTACT).findOne({ _id: new ObjectId(id) })
+  try {
+    return db.collection(COLLECTIONS.CONTACT).findOne({ _id: new ObjectId(id) })
+  } catch (error) {
+    console.error("Error in getMessageById:", error)
+    return null
+  }
 }
 
 export async function createMessage(messageData: any) {
@@ -184,12 +272,22 @@ export async function createMessage(messageData: any) {
 
 export async function markMessageAsRead(id: string) {
   const db = await getDb()
-  return db.collection(COLLECTIONS.CONTACT).updateOne({ _id: new ObjectId(id) }, { $set: { read: true } })
+  try {
+    return db.collection(COLLECTIONS.CONTACT).updateOne({ _id: new ObjectId(id) }, { $set: { read: true } })
+  } catch (error) {
+    console.error("Error in markMessageAsRead:", error)
+    throw error
+  }
 }
 
 export async function deleteMessage(id: string) {
   const db = await getDb()
-  return db.collection(COLLECTIONS.CONTACT).deleteOne({ _id: new ObjectId(id) })
+  try {
+    return db.collection(COLLECTIONS.CONTACT).deleteOne({ _id: new ObjectId(id) })
+  } catch (error) {
+    console.error("Error in deleteMessage:", error)
+    throw error
+  }
 }
 
 // Banners
@@ -200,7 +298,12 @@ export async function getBanners() {
 
 export async function getBannerById(id: string) {
   const db = await getDb()
-  return db.collection(COLLECTIONS.BANNERS).findOne({ _id: new ObjectId(id) })
+  try {
+    return db.collection(COLLECTIONS.BANNERS).findOne({ _id: new ObjectId(id) })
+  } catch (error) {
+    console.error("Error in getBannerById:", error)
+    return null
+  }
 }
 
 export async function createBanner(bannerData: any) {
@@ -214,13 +317,31 @@ export async function createBanner(bannerData: any) {
 
 export async function updateBanner(id: string, bannerData: any) {
   const db = await getDb()
-  const result = await db.collection(COLLECTIONS.BANNERS).updateOne({ _id: new ObjectId(id) }, { $set: bannerData })
-  return result
+  try {
+    const result = await db.collection(COLLECTIONS.BANNERS).updateOne(
+      { _id: new ObjectId(id) },
+      {
+        $set: {
+          ...bannerData,
+          updatedAt: new Date(),
+        },
+      },
+    )
+    return result
+  } catch (error) {
+    console.error("Error in updateBanner:", error)
+    throw error
+  }
 }
 
 export async function deleteBanner(id: string) {
   const db = await getDb()
-  return db.collection(COLLECTIONS.BANNERS).deleteOne({ _id: new ObjectId(id) })
+  try {
+    return db.collection(COLLECTIONS.BANNERS).deleteOne({ _id: new ObjectId(id) })
+  } catch (error) {
+    console.error("Error in deleteBanner:", error)
+    throw error
+  }
 }
 
 // Settings
@@ -232,10 +353,22 @@ export async function getSettings() {
 
 export async function updateSettings(settingsData: any) {
   const db = await getDb()
-  const result = await db
-    .collection(COLLECTIONS.SETTINGS)
-    .updateOne({ type: "general" }, { $set: { ...settingsData, updatedAt: new Date() } }, { upsert: true })
-  return result
+  try {
+    const result = await db.collection(COLLECTIONS.SETTINGS).updateOne(
+      { type: "general" },
+      {
+        $set: {
+          ...settingsData,
+          updatedAt: new Date(),
+        },
+      },
+      { upsert: true },
+    )
+    return result
+  } catch (error) {
+    console.error("Error in updateSettings:", error)
+    throw error
+  }
 }
 
 // Config
@@ -246,25 +379,29 @@ export async function getConfig(configType: string) {
 
 export async function updateConfig(configType: string, configData: any) {
   const db = await getDb()
-  const result = await db
-    .collection(COLLECTIONS.CONFIG)
-    .updateOne({ type: configType }, { $set: { ...configData, updatedAt: new Date() } }, { upsert: true })
-  return result
+  try {
+    const result = await db.collection(COLLECTIONS.CONFIG).updateOne(
+      { type: configType },
+      {
+        $set: {
+          ...configData,
+          updatedAt: new Date(),
+        },
+      },
+      { upsert: true },
+    )
+    return result
+  } catch (error) {
+    console.error("Error in updateConfig:", error)
+    throw error
+  }
 }
 
 // Analytics
-export async function recordPageView(pageData: any) {
-  const db = await getDb()
-  return db.collection(COLLECTIONS.ANALYTICS).insertOne({
-    ...pageData,
-    timestamp: new Date(),
-  })
-}
-
 export async function getAnalytics(period: string) {
   const db = await getDb()
 
-  let dateFilter = {}
+  let dateFilter: { timestamp?: { $gte: Date } } = {}
   const now = new Date()
 
   if (period === "last_month") {
@@ -285,8 +422,8 @@ export async function getAnalytics(period: string) {
     dateFilter = { timestamp: { $gte: lastYear } }
   }
 
-  // Get page views by date
-  const pageViewsByDate = await db
+  // Get page views by date (grouped by month)
+  const pageViewsByMonth = await db
     .collection(COLLECTIONS.ANALYTICS)
     .aggregate([
       { $match: dateFilter },
@@ -295,12 +432,11 @@ export async function getAnalytics(period: string) {
           _id: {
             year: { $year: "$timestamp" },
             month: { $month: "$timestamp" },
-            day: { $dayOfMonth: "$timestamp" },
           },
           count: { $sum: 1 },
         },
       },
-      { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } },
+      { $sort: { "_id.year": 1, "_id.month": 1 } },
     ])
     .toArray()
 
@@ -319,9 +455,68 @@ export async function getAnalytics(period: string) {
     ])
     .toArray()
 
+  // Get product views (only for product pages)
+  const productViews = await db
+    .collection(COLLECTIONS.ANALYTICS)
+    .aggregate([
+      {
+        $match: {
+          ...dateFilter,
+          productId: { $ne: null },
+        },
+      },
+      {
+        $group: {
+          _id: "$productId",
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { count: -1 } },
+      { $limit: 10 },
+    ])
+    .toArray()
+
+  // Get product details for the top viewed products
+  const productIds = productViews
+    .map((item) => {
+      try {
+        return new ObjectId(item._id)
+      } catch (error) {
+        return null
+      }
+    })
+    .filter((id) => id !== null)
+
+  let topProducts: {
+      _id: string
+      name: string
+      views: number
+      price: number
+      category: string
+    }[] = []
+  if (productIds.length > 0) {
+    const products = await db
+      .collection(COLLECTIONS.PRODUCTS)
+      .find({ _id: { $in: productIds } })
+      .toArray()
+
+    // Map product details with view counts
+    topProducts = productViews.map((view) => {
+      const product = products.find((p) => p._id.toString() === view._id)
+      return {
+        _id: view._id,
+        name: product ? product.name : "Unknown Product",
+        views: view.count,
+        price: product ? product.price : 0,
+        category: product ? product.category : "Unknown",
+      }
+    })
+  }
+
   return {
-    pageViewsByDate,
+    pageViewsByMonth,
     pageViewsByPage,
+    topProducts,
   }
 }
 
@@ -329,7 +524,7 @@ export async function getAnalytics(period: string) {
 export async function getStats(period: string) {
   const db = await getDb()
 
-  let dateFilter = {}
+  let dateFilter: { createdAt?: { $gte: Date } } = {}
   const now = new Date()
 
   if (period === "last_month") {
@@ -360,7 +555,9 @@ export async function getStats(period: string) {
 
   // Get page views count
   const pageViewsCount = await db.collection(COLLECTIONS.ANALYTICS).countDocuments()
-  const newPageViewsCount = await db.collection(COLLECTIONS.ANALYTICS).countDocuments(dateFilter)
+  const newPageViewsCount = await db.collection(COLLECTIONS.ANALYTICS).countDocuments({
+    timestamp: dateFilter.createdAt,
+  })
 
   // Calculate percentage changes
   const productChange = productsCount > 0 ? (newProductsCount / productsCount) * 100 : 0
@@ -386,4 +583,22 @@ export async function getStats(period: string) {
     },
   }
 }
+export async function getCategory(id: string) {
+  const db = await getDb()
+  try {
+    return db.collection(COLLECTIONS.CATEGORIES).findOne({ _id: new ObjectId(id) })
+  } catch (error) {
+    console.error("Error in getCategory:", error)
+    return null
+  }
+}
+export { ObjectId } from "mongodb"
 
+export async function recordPageView(data: any) {
+  const db = await getDb()
+  const result = await db.collection(COLLECTIONS.ANALYTICS).insertOne({
+    ...data,
+    timestamp: new Date(),
+  })
+  return result
+}

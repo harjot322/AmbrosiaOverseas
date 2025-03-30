@@ -15,6 +15,7 @@ import { Loader2, Save } from "lucide-react"
 export default function SettingsPage() {
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
+  const [initialLoad, setInitialLoad] = useState(true)
   const [settings, setSettings] = useState({
     siteName: "Ambrosia Overseas",
     siteDescription: "Premium imported food products from around the world",
@@ -46,6 +47,15 @@ export default function SettingsPage() {
       const data = await response.json()
 
       if (data && Object.keys(data).length > 0) {
+        // Ensure socialLinks exists
+        if (!data.socialLinks) {
+          data.socialLinks = {
+            facebook: "",
+            instagram: "",
+            twitter: "",
+          }
+        }
+
         setSettings({
           ...settings,
           ...data,
@@ -60,6 +70,7 @@ export default function SettingsPage() {
       })
     } finally {
       setLoading(false)
+      setInitialLoad(false)
     }
   }
 
@@ -94,30 +105,26 @@ export default function SettingsPage() {
     }
   }
 
-  const handleChange = (e) => {
-    const { name, value } = e.target
-    setSettings((prev) => ({
-      ...prev,
-      [name]: value,
-    }))
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setSettings((prev) => ({ ...prev, [name]: value, }));
   }
 
-  const handleSocialChange = (e) => {
-    const { name, value } = e.target
-    setSettings((prev) => ({
-      ...prev,
-      socialLinks: {
-        ...prev.socialLinks,
-        [name]: value,
-      },
-    }))
+  const handleSocialChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setSettings((prev) => ({ ...prev, socialLinks: { ...prev.socialLinks, [name]: value, }, }));
   }
 
-  const handleSwitchChange = (name, checked) => {
-    setSettings((prev) => ({
-      ...prev,
-      [name]: checked,
-    }))
+  const handleSwitchChange = (name: string, checked: boolean) => {
+    setSettings((prev) => ({ ...prev, [name]: checked, }));
+  }
+
+  if (initialLoad) {
+    return (
+      <div className="p-6 flex items-center justify-center h-[calc(100vh-100px)]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
   }
 
   return (
