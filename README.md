@@ -31,11 +31,6 @@ Text content is embedded within the React components. Here are the main files co
   - `MONGODB_URI` - MongoDB connection string
   - `JWT_SECRET` - Secret for JWT authentication
 
-## Admin Access
-
-The admin dashboard is accessible at `/admin` with the following credentials:
-- Username: admin
-- Password: HarjotAyansh
 
 ## Adding Products
 

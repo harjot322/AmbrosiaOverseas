@@ -1,9 +1,51 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Mail, Phone, MapPin, Facebook, Instagram, Twitter } from "lucide-react"
 
 import { Logo } from "@/components/logo"
 
 export function Footer() {
+  const [settings, setSettings] = useState({
+    contactEmail: "ambrosiaoverseas.an@gmail.com",
+    contactPhone: "+91 8287587442",
+    address: "Ambrosia Overseas, 4420 Gali Bahu Ji, Sadar Bazar Delhi-110006",
+    socialLinks: {
+      facebook: "",
+      instagram: "",
+      twitter: "",
+    },
+  })
+
+  useEffect(() => {
+    // Fetch settings from API
+    const fetchSettings = async () => {
+      try {
+        const response = await fetch("/api/settings")
+        if (response.ok) {
+          const data = await response.json()
+          if (data) {
+            setSettings({
+              contactEmail: data.contactEmail || settings.contactEmail,
+              contactPhone: data.contactPhone || settings.contactPhone,
+              address: data.address || settings.address,
+              socialLinks: {
+                facebook: data.socialLinks?.facebook || "",
+                instagram: data.socialLinks?.instagram || "",
+                twitter: data.socialLinks?.twitter || "",
+              },
+            })
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching settings:", error)
+      }
+    }
+
+    fetchSettings()
+  }, [])
+
   return (
     <footer className="bg-black text-white pt-16 pb-8">
       <div className="container">
@@ -14,18 +56,39 @@ export function Footer() {
               Premium imported food products from around the world, bringing global flavors to your doorstep.
             </p>
             <div className="flex space-x-4">
-              <Link href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                <Facebook className="h-5 w-5" />
-                <span className="sr-only">Facebook</span>
-              </Link>
-              <Link href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                <Instagram className="h-5 w-5" />
-                <span className="sr-only">Instagram</span>
-              </Link>
-              <Link href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                <Twitter className="h-5 w-5" />
-                <span className="sr-only">Twitter</span>
-              </Link>
+              {settings.socialLinks.facebook && (
+                <Link
+                  href={settings.socialLinks.facebook}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground hover:text-primary transition-colors"
+                >
+                  <Facebook className="h-5 w-5" />
+                  <span className="sr-only">Facebook</span>
+                </Link>
+              )}
+              {settings.socialLinks.instagram && (
+                <Link
+                  href={settings.socialLinks.instagram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground hover:text-primary transition-colors"
+                >
+                  <Instagram className="h-5 w-5" />
+                  <span className="sr-only">Instagram</span>
+                </Link>
+              )}
+              {settings.socialLinks.twitter && (
+                <Link
+                  href={settings.socialLinks.twitter}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground hover:text-primary transition-colors"
+                >
+                  <Twitter className="h-5 w-5" />
+                  <span className="sr-only">Twitter</span>
+                </Link>
+              )}
             </div>
           </div>
 
@@ -106,17 +169,15 @@ export function Footer() {
             <ul className="space-y-4">
               <li className="flex items-start gap-3">
                 <MapPin className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                <span className="text-muted-foreground">
-                  Ambrosia Overseas, 4420 Gali Bahu Ji, Sadar Bazar Delhi-110006
-                </span>
+                <span className="text-muted-foreground">{settings.address}</span>
               </li>
               <li className="flex items-center gap-3">
                 <Phone className="h-5 w-5 text-primary shrink-0" />
-                <span className="text-muted-foreground">+91 8287587442</span>
+                <span className="text-muted-foreground">{settings.contactPhone}</span>
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="h-5 w-5 text-primary shrink-0" />
-                <span className="text-muted-foreground">ambrosiaoverseas.an@gmail.com</span>
+                <span className="text-muted-foreground">{settings.contactEmail}</span>
               </li>
             </ul>
           </div>

@@ -1,30 +1,26 @@
 import { NextResponse } from "next/server"
-import clientPromise from "@/lib/mongodb"
+import { getMessages, createMessage } from "@/lib/db-service"
+
+export async function GET() {
+  try {
+    const messages = await getMessages()
+    return NextResponse.json(messages)
+  } catch (error) {
+    console.error("Error fetching messages:", error)
+    return NextResponse.json({ error: "Failed to fetch messages" }, { status: 500 })
+  }
+}
 
 export async function POST(request: Request) {
   try {
-    const { name, email, phone, subject, message } = await request.json()
+    const body = await request.json()
 
     // Validate input
-    if (!name || !email || !subject || !message) {
+    if (!body.name || !body.email || !body.subject || !body.message) {
       return NextResponse.json({ error: "Name, email, subject, and message are required" }, { status: 400 })
     }
 
-    // Connect to MongoDB
-    const client = await clientPromise
-    const db = client.db("ambrosia")
-    const messagesCollection = db.collection("contactMessages")
-
-    // Create message
-    const result = await messagesCollection.insertOne({
-      name,
-      email,
-      phone: phone || "",
-      subject,
-      message,
-      read: false,
-      createdAt: new Date(),
-    })
+    const result = await createMessage(body)
 
     return NextResponse.json(
       {
@@ -35,8 +31,8 @@ export async function POST(request: Request) {
       { status: 201 },
     )
   } catch (error) {
-    console.error("Contact message error:", error)
-    return NextResponse.json({ error: "An error occurred while sending your message" }, { status: 500 })
+    console.error("Error creating message:", error)
+    return NextResponse.json({ error: "Failed to send message" }, { status: 500 })
   }
 }
 

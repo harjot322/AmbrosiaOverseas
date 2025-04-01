@@ -30,24 +30,26 @@ export function OpenStreetMap({
       try {
         const L = await loadLeaflet()
     
-        const map = L.map(mapContainerRef.current).setView([latitude, longitude], zoom)
-        mapInstanceRef.current = map
+        if (!mapInstanceRef.current) {
+          const map = L.map(mapContainerRef.current).setView([latitude, longitude], zoom)
+          mapInstanceRef.current = map
     
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        }).addTo(map)
+          L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+          }).addTo(map)
     
-        const markerIcon = L.icon({
-          iconUrl: customMarker || "/custom-marker.png",
-          iconSize: [50, 50],
-          iconAnchor: [25, 50],
-          popupAnchor: [0, -50],
-        })
+          const markerIcon = L.icon({
+            iconUrl: customMarker || "/custom-marker.png",
+            iconSize: [50, 50],
+            iconAnchor: [25, 50],
+            popupAnchor: [0, -50],
+          })
     
-        L.marker([latitude, longitude], { icon: markerIcon })
-          .addTo(map)
-          .bindPopup(markerTitle)
-          .openPopup()
+          L.marker([latitude, longitude], { icon: markerIcon })
+            .addTo(map)
+            .bindPopup(markerTitle)
+            .openPopup()
+        }
       } catch (error) {
         console.error("Failed to initialize the map:", error)
       }
@@ -63,7 +65,7 @@ export function OpenStreetMap({
         mapInstanceRef.current = null
       }
     }
-  }, [latitude, longitude, zoom, markerTitle, customMarker])
+  }, []) // Update the dependency array to an empty array
 
   return (
     <div

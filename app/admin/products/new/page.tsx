@@ -1,5 +1,4 @@
-"use client"
-
+"use client";
 import type React from "react"
 
 import { useState } from "react"
@@ -17,11 +16,32 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 
+interface FormData {
+  name: string
+  description: string
+  category: string
+  origin: string
+  price: string
+  stock: string
+  active: boolean
+  featured: boolean
+  tags: string[]
+  nutritionalInfo: {
+    servingSize: string
+    calories: string
+    protein: string
+    carbs: string
+    sugar: string
+    fat: string
+  }
+  ingredients: string
+}
+
 export default function NewProduct() {
   const router = useRouter()
   const { toast } = useToast()
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     name: "",
     description: "",
     category: "",
@@ -30,7 +50,7 @@ export default function NewProduct() {
     stock: "",
     active: true,
     featured: false,
-    tags: [] as string[],
+    tags: [],
     nutritionalInfo: {
       servingSize: "",
       calories: "",
@@ -97,19 +117,38 @@ export default function NewProduct() {
     setImages((prev) => prev.filter((_, i) => i !== index))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false)
-      toast({
-        title: "Product Created",
-        description: "The product has been created successfully.",
+    try {
+      const response = await fetch("/api/products", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
       })
-      router.push("/admin/products")
-    }, 1500)
+
+      if (response.ok) {
+        toast({
+          title: "Product Created",
+          description: "The product has been created successfully.",
+        })
+        router.push("/admin/products")
+      } else {
+        throw new Error("Failed to create product")
+      }
+    } catch (error) {
+      console.error("Error creating product:", error)
+      toast({
+        title: "Error",
+        description: "Failed to create product",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -470,4 +509,3 @@ export default function NewProduct() {
     </div>
   )
 }
-
