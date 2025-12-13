@@ -31,6 +31,29 @@ Text content is embedded within the React components. Here are the main files co
   - `MONGODB_URI` - MongoDB connection string
   - `JWT_SECRET` - Secret for JWT authentication
 
+## Quickstart
+
+1. Copy the sample environment file and fill in secrets:
+   ```bash
+   cp .env.example .env.local
+   # update MONGODB_URI and JWT_SECRET with your values
+   ```
+2. Start a local MongoDB instance (for example with Docker):
+   ```bash
+   docker run -d --name ambrosia-mongo -p 27017:27017 mongo:6
+   ```
+3. Install dependencies and run the app:
+   ```bash
+   pnpm install --frozen-lockfile
+   pnpm dev
+   ```
+4. Open http://localhost:3000 for the storefront and http://localhost:3000/admin for the admin dashboard.
+5. Build verification (optional):
+   ```bash
+   pnpm lint
+   pnpm build
+   ```
+
 
 ## Adding Products
 

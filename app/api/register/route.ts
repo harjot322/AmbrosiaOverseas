@@ -39,7 +39,7 @@ export async function POST(request: Request) {
       {
         success: true,
         message: "User registered successfully",
-        userId: result.insertedId,
+        userId: result.insertedId.toString(),
       },
       { status: 201 },
     )
