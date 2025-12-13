@@ -1,15 +1,30 @@
 import { NextResponse } from "next/server"
-import { updateCategory, deleteCategory, getCategory, ObjectId } from "@/lib/db-service"
+import { getCategory, updateCategory, deleteCategory } from "@/lib/db-service"
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
-    const { id } = await params
-    const body = await request.json()
-    const category = await getCategory(id)
+    const category = await getCategory(params.id)
 
     if (!category) {
       return NextResponse.json({ error: "Category not found" }, { status: 404 })
     }
+
+    return NextResponse.json({ ...category, _id: category._id.toString() })
+  } catch (error) {
+    console.error("Error fetching category:", error)
+    return NextResponse.json({ error: "Failed to fetch category" }, { status: 500 })
+  }
+}
+
+export async function PUT(request: Request, { params }: { params: { id: string } }) {
+  try {
+    const category = await getCategory(params.id)
+
+    if (!category) {
+      return NextResponse.json({ error: "Category not found" }, { status: 404 })
+    }
+
+    const body = await request.json()
 
     const updatedCategory = {
       _id: category._id,
@@ -18,7 +33,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       subcategories: body.subcategories || category.subcategories,
     }
 
-    const result = await updateCategory(id, updatedCategory)
+    const result = await updateCategory(params.id, updatedCategory)
 
     if (result.matchedCount === 0) {
       return NextResponse.json({ error: "Category not found" }, { status: 404 })
@@ -36,8 +51,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
-    const { id } = await params
-    const result = await deleteCategory(id)
+    const result = await deleteCategory(params.id)
 
     if (result.deletedCount === 0) {
       return NextResponse.json({ error: "Category not found" }, { status: 404 })

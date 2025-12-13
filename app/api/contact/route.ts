@@ -4,7 +4,13 @@ import { getMessages, createMessage } from "@/lib/db-service"
 export async function GET() {
   try {
     const messages = await getMessages()
-    return NextResponse.json(messages)
+    const serialized = messages.map((message) => ({
+      ...message,
+      _id: message._id.toString(),
+      createdAt: message.createdAt ? new Date(message.createdAt).toISOString() : undefined,
+    }))
+
+    return NextResponse.json(serialized)
   } catch (error) {
     console.error("Error fetching messages:", error)
     return NextResponse.json({ error: "Failed to fetch messages" }, { status: 500 })
@@ -26,7 +32,7 @@ export async function POST(request: Request) {
       {
         success: true,
         message: "Message sent successfully",
-        messageId: result.insertedId,
+        messageId: result.insertedId.toString(),
       },
       { status: 201 },
     )

@@ -23,7 +23,14 @@ export async function GET(request: Request) {
     }
 
     const products = await getProducts(filters)
-    return NextResponse.json(products)
+    const serialized = products.map((product) => ({
+      ...product,
+      _id: product._id.toString(),
+      createdAt: product.createdAt ? new Date(product.createdAt).toISOString() : undefined,
+      updatedAt: product.updatedAt ? new Date(product.updatedAt).toISOString() : undefined,
+    }))
+
+    return NextResponse.json(serialized)
   } catch (error) {
     console.error("Error fetching products:", error)
     return NextResponse.json({ error: "Failed to fetch products" }, { status: 500 })
@@ -39,7 +46,7 @@ export async function POST(request: Request) {
       {
         success: true,
         message: "Product created successfully",
-        productId: result.insertedId,
+        productId: result.insertedId.toString(),
       },
       { status: 201 },
     )

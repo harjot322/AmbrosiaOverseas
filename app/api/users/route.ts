@@ -9,7 +9,10 @@ export async function GET() {
     // Remove password from response
     const sanitizedUsers = users.map((user) => {
       const { password, ...userWithoutPassword } = user
-      return userWithoutPassword
+      return {
+        ...userWithoutPassword,
+        _id: user._id.toString(),
+      }
     })
 
     return NextResponse.json(sanitizedUsers)
@@ -38,7 +41,7 @@ export async function POST(request: Request) {
       {
         success: true,
         message: "User created successfully",
-        userId: result.insertedId,
+        userId: result.insertedId.toString(),
       },
       { status: 201 },
     )

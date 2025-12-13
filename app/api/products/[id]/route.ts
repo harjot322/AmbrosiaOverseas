@@ -9,7 +9,12 @@ export async function GET(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ error: "Product not found" }, { status: 404 })
     }
 
-    return NextResponse.json(product)
+    return NextResponse.json({
+      ...product,
+      _id: product._id.toString(),
+      createdAt: product.createdAt ? new Date(product.createdAt).toISOString() : undefined,
+      updatedAt: product.updatedAt ? new Date(product.updatedAt).toISOString() : undefined,
+    })
   } catch (error) {
     console.error("Error fetching product:", error)
     return NextResponse.json({ error: "Failed to fetch product" }, { status: 500 })
