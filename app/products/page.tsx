@@ -1,8 +1,9 @@
 "use client";
-import { Suspense } from "react"
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { ChevronDown, Grid3X3, LayoutList } from "lucide-react"
+import { useRouter, useSearchParams } from "next/navigation"
 
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
@@ -14,8 +15,156 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import type { Banner, Category, Product, Tag } from "@/types/types"
+
+const formatPrice = (value?: number) => {
+  if (typeof value !== "number") return "Price on request"
+  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(value)
+}
+
+const parseList = (value: string | null) =>
+  value ? value.split(",").map((item) => item.trim()).filter(Boolean) : []
 
 export default function ProductsPage() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
+  const [categories, setCategories] = useState<Category[]>([])
+  const [tags, setTags] = useState<Tag[]>([])
+  const [origins, setOrigins] = useState<string[]>([])
+  const [products, setProducts] = useState<Product[]>([])
+  const [heroBanner, setHeroBanner] = useState<Banner | null>(null)
+  const [loadingProducts, setLoadingProducts] = useState(true)
+
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(() => parseList(searchParams.get("category")))
+  const [selectedOrigins, setSelectedOrigins] = useState<string[]>(() => parseList(searchParams.get("origin")))
+  const [selectedTags, setSelectedTags] = useState<string[]>(() => parseList(searchParams.get("tag")))
+  const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>(() =>
+    parseList(searchParams.get("subcategory")),
+  )
+  const [sort, setSort] = useState(searchParams.get("sort") || "featured")
+  const [priceMin, setPriceMin] = useState(searchParams.get("minPrice") || "")
+  const [priceMax, setPriceMax] = useState(searchParams.get("maxPrice") || "")
+  const [priceMinInput, setPriceMinInput] = useState(priceMin)
+  const [priceMaxInput, setPriceMaxInput] = useState(priceMax)
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
+
+  const buildQueryString = useCallback(() => {
+    const params = new URLSearchParams()
+    if (selectedCategories.length) params.set("category", selectedCategories.join(","))
+    if (selectedSubcategories.length) params.set("subcategory", selectedSubcategories.join(","))
+    if (selectedOrigins.length) params.set("origin", selectedOrigins.join(","))
+    if (selectedTags.length) params.set("tag", selectedTags.join(","))
+    if (priceMin) params.set("minPrice", priceMin)
+    if (priceMax) params.set("maxPrice", priceMax)
+    if (sort) params.set("sort", sort)
+    return params.toString()
+  }, [priceMax, priceMin, selectedCategories, selectedOrigins, selectedSubcategories, selectedTags, sort])
+
+  const fetchProducts = useCallback(async () => {
+    try {
+      setLoadingProducts(true)
+      const queryString = buildQueryString()
+      const response = await fetch(`/api/products${queryString ? `?${queryString}` : ""}`)
+      const data = await response.json()
+      setProducts(data)
+    } catch (error) {
+      console.error("Error fetching products:", error)
+      setProducts([])
+    } finally {
+      setLoadingProducts(false)
+    }
+  }, [buildQueryString])
+
+  const fetchFilters = useCallback(async () => {
+    try {
+      const [categoriesResponse, tagsResponse, originsResponse, bannersResponse] = await Promise.all([
+        fetch("/api/categories"),
+        fetch("/api/tags"),
+        fetch("/api/products?distinct=origin"),
+        fetch("/api/banners"),
+      ])
+      const [categoriesData, tagsData, originsData] = await Promise.all([
+        categoriesResponse.json(),
+        tagsResponse.json(),
+        originsResponse.json(),
+      ])
+      setCategories(categoriesData)
+      setTags(tagsData)
+      setOrigins(originsData.filter(Boolean))
+      if (bannersResponse.ok) {
+        const bannerData = await bannersResponse.json()
+        const activeBanners = (bannerData || []).filter((banner: Banner) => banner.isActive)
+        setHeroBanner(activeBanners.find((banner: Banner) => banner.position === "products_top") || null)
+      }
+    } catch (error) {
+      console.error("Error fetching filters:", error)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchFilters()
+  }, [fetchFilters])
+
+  useEffect(() => {
+    fetchProducts()
+  }, [fetchProducts])
+
+  useEffect(() => {
+    const queryString = buildQueryString()
+    router.replace(`/products${queryString ? `?${queryString}` : ""}`, { scroll: false })
+  }, [buildQueryString, router])
+
+  const toggleItem = (value: string, current: string[], setCurrent: (values: string[]) => void) => {
+    setCurrent(current.includes(value) ? current.filter((item) => item !== value) : [...current, value])
+  }
+
+  const clearFilters = () => {
+    setSelectedCategories([])
+    setSelectedOrigins([])
+    setSelectedTags([])
+    setSelectedSubcategories([])
+    setPriceMin("")
+    setPriceMax("")
+    setPriceMinInput("")
+    setPriceMaxInput("")
+    setSort("featured")
+  }
+
+  const applyPriceRange = () => {
+    setPriceMin(priceMinInput)
+    setPriceMax(priceMaxInput)
+  }
+
+  const activeFilters = useMemo(() => {
+    const filters: { label: string; onRemove: () => void }[] = []
+    selectedCategories.forEach((category) =>
+      filters.push({
+        label: category,
+        onRemove: () => setSelectedCategories((prev) => prev.filter((item) => item !== category)),
+      }),
+    )
+    selectedSubcategories.forEach((subcategory) =>
+      filters.push({
+        label: subcategory,
+        onRemove: () => setSelectedSubcategories((prev) => prev.filter((item) => item !== subcategory)),
+      }),
+    )
+    selectedOrigins.forEach((origin) =>
+      filters.push({
+        label: origin,
+        onRemove: () => setSelectedOrigins((prev) => prev.filter((item) => item !== origin)),
+      }),
+    )
+    selectedTags.forEach((tag) =>
+      filters.push({
+        label: tag,
+        onRemove: () => setSelectedTags((prev) => prev.filter((item) => item !== tag)),
+      }),
+    )
+    return filters
+  }, [selectedCategories, selectedOrigins, selectedSubcategories, selectedTags])
+
   return (
     <main className="min-h-screen flex flex-col">
       <Navbar />
@@ -23,13 +172,22 @@ export default function ProductsPage() {
       <div className="pt-16 flex-1">
         {/* Hero Banner */}
         <div className="relative h-64 md:h-80 bg-black text-white">
-          <Image src="/placeholder.svg?height=400&width=1920" alt="Products" fill className="object-cover opacity-60" />
+          <Image
+            src={heroBanner?.imageUrl || "/placeholder.svg?height=400&width=1920"}
+            alt={heroBanner?.title || "Products"}
+            fill
+            className="object-cover opacity-60"
+          />
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
             <h1 className="text-3xl md:text-5xl font-bold mb-4">
-              Our <span className="gold-text">Premium</span> Products
+              {heroBanner?.title || (
+                <>
+                  Our <span className="gold-text">Premium</span> Products
+                </>
+              )}
             </h1>
             <p className="max-w-2xl text-gray-300">
-              Explore our extensive collection of imported food products from around the world.
+              {heroBanner?.subtitle || "Explore our extensive collection of imported food products from around the world."}
             </p>
           </div>
         </div>
@@ -41,7 +199,7 @@ export default function ProductsPage() {
             <div className="lg:w-1/4 space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold">Filters</h2>
-                <Button variant="ghost" size="sm" className="text-primary">
+                <Button variant="ghost" size="sm" className="text-primary" onClick={clearFilters}>
                   Reset All
                 </Button>
               </div>
@@ -54,126 +212,50 @@ export default function ProductsPage() {
                     </AccordionTrigger>
                     <AccordionContent>
                       <div className="space-y-4 pt-1">
-                        <div className="space-y-2">
-                          <div className="flex items-center space-x-2">
-                            <Checkbox id="category-beverages" />
-                            <label
-                              htmlFor="category-beverages"
-                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                            >
-                              Beverages
-                            </label>
-                          </div>
-                          <div className="pl-6 space-y-1">
-                            <div className="flex items-center space-x-2">
-                              <Checkbox id="subcategory-soft-drinks" />
-                              <label
-                                htmlFor="subcategory-soft-drinks"
-                                className="text-xs leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                              >
-                                Soft Drinks
-                              </label>
+                        {categories.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">No categories available.</p>
+                        ) : (
+                          categories.map((category) => (
+                            <div key={category._id} className="space-y-2">
+                              <div className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`category-${category.slug}`}
+                                  checked={selectedCategories.includes(category.slug)}
+                                  onCheckedChange={() =>
+                                    toggleItem(category.slug, selectedCategories, setSelectedCategories)
+                                  }
+                                />
+                                <label
+                                  htmlFor={`category-${category.slug}`}
+                                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                >
+                                  {category.name}
+                                </label>
+                              </div>
+                              {category.subcategories?.length > 0 && (
+                                <div className="pl-6 space-y-1">
+                                  {category.subcategories.map((subcategory) => (
+                                    <div key={subcategory.slug} className="flex items-center space-x-2">
+                                      <Checkbox
+                                        id={`subcategory-${subcategory.slug}`}
+                                        checked={selectedSubcategories.includes(subcategory.slug)}
+                                        onCheckedChange={() =>
+                                          toggleItem(subcategory.slug, selectedSubcategories, setSelectedSubcategories)
+                                        }
+                                      />
+                                      <label
+                                        htmlFor={`subcategory-${subcategory.slug}`}
+                                        className="text-xs leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                      >
+                                        {subcategory.name}
+                                      </label>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
-                            <div className="flex items-center space-x-2">
-                              <Checkbox id="subcategory-energy-drinks" />
-                              <label
-                                htmlFor="subcategory-energy-drinks"
-                                className="text-xs leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                              >
-                                Energy Drinks
-                              </label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Checkbox id="subcategory-coffee" />
-                              <label
-                                htmlFor="subcategory-coffee"
-                                className="text-xs leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                              >
-                                Coffee
-                              </label>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <div className="flex items-center space-x-2">
-                            <Checkbox id="category-snacks" />
-                            <label
-                              htmlFor="category-snacks"
-                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                            >
-                              Snacks
-                            </label>
-                          </div>
-                          <div className="pl-6 space-y-1">
-                            <div className="flex items-center space-x-2">
-                              <Checkbox id="subcategory-chips" />
-                              <label
-                                htmlFor="subcategory-chips"
-                                className="text-xs leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                              >
-                                Chips
-                              </label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Checkbox id="subcategory-crackers" />
-                              <label
-                                htmlFor="subcategory-crackers"
-                                className="text-xs leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                              >
-                                Crackers
-                              </label>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <div className="flex items-center space-x-2">
-                            <Checkbox id="category-cookies" />
-                            <label
-                              htmlFor="category-cookies"
-                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                            >
-                              Cookies & Muffins
-                            </label>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <div className="flex items-center space-x-2">
-                            <Checkbox id="category-cereals" />
-                            <label
-                              htmlFor="category-cereals"
-                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                            >
-                              Breakfast Cereals
-                            </label>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <div className="flex items-center space-x-2">
-                            <Checkbox id="category-protein" />
-                            <label
-                              htmlFor="category-protein"
-                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                            >
-                              Protein Bars
-                            </label>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <div className="flex items-center space-x-2">
-                            <Checkbox id="category-taco" />
-                            <label
-                              htmlFor="category-taco"
-                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                            >
-                              Taco Shells
-                            </label>
-                          </div>
-                        </div>
+                          ))
+                        )}
                       </div>
                     </AccordionContent>
                   </AccordionItem>
@@ -188,17 +270,25 @@ export default function ProductsPage() {
                     </AccordionTrigger>
                     <AccordionContent>
                       <div className="space-y-2 pt-1">
-                        {["USA", "UK", "Dubai", "Thailand", "Australia", "New Zealand"].map((country) => (
-                          <div key={country} className="flex items-center space-x-2">
-                            <Checkbox id={`country-${country}`} />
-                            <label
-                              htmlFor={`country-${country}`}
-                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                            >
-                              {country}
-                            </label>
-                          </div>
-                        ))}
+                        {origins.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">No origins available.</p>
+                        ) : (
+                          origins.map((country) => (
+                            <div key={country} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`country-${country}`}
+                                checked={selectedOrigins.includes(country)}
+                                onCheckedChange={() => toggleItem(country, selectedOrigins, setSelectedOrigins)}
+                              />
+                              <label
+                                htmlFor={`country-${country}`}
+                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                              >
+                                {country}
+                              </label>
+                            </div>
+                          ))
+                        )}
                       </div>
                     </AccordionContent>
                   </AccordionItem>
@@ -216,14 +306,14 @@ export default function ProductsPage() {
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-1">
                             <label className="text-xs text-muted-foreground">Min</label>
-                            <Input type="number" placeholder="₹0" />
+                            <Input type="number" placeholder="₹0" value={priceMinInput} onChange={(e) => setPriceMinInput(e.target.value)} />
                           </div>
                           <div className="space-y-1">
                             <label className="text-xs text-muted-foreground">Max</label>
-                            <Input type="number" placeholder="₹5000" />
+                            <Input type="number" placeholder="₹5000" value={priceMaxInput} onChange={(e) => setPriceMaxInput(e.target.value)} />
                           </div>
                         </div>
-                        <Button className="w-full">Apply</Button>
+                        <Button className="w-full" onClick={applyPriceRange}>Apply</Button>
                       </div>
                     </AccordionContent>
                   </AccordionItem>
@@ -238,18 +328,24 @@ export default function ProductsPage() {
                     </AccordionTrigger>
                     <AccordionContent>
                       <div className="space-y-2 pt-1">
-                        {["Best Seller", "New Arrival", "Limited Edition", "Exclusive", "Only on Ambrosia"].map(
-                          (tag) => (
-                            <div key={tag} className="flex items-center space-x-2">
-                              <Checkbox id={`tag-${tag}`} />
+                        {tags.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">No tags available.</p>
+                        ) : (
+                          tags.map((tag) => (
+                            <div key={tag._id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`tag-${tag.slug}`}
+                                checked={selectedTags.includes(tag.name)}
+                                onCheckedChange={() => toggleItem(tag.name, selectedTags, setSelectedTags)}
+                              />
                               <label
-                                htmlFor={`tag-${tag}`}
+                                htmlFor={`tag-${tag.slug}`}
                                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                               >
-                                {tag}
+                                {tag.name}
                               </label>
                             </div>
-                          ),
+                          ))
                         )}
                       </div>
                     </AccordionContent>
@@ -262,28 +358,34 @@ export default function ProductsPage() {
             <div className="lg:w-3/4">
               {/* Toolbar */}
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="rounded-full px-3 py-1 border-primary/50">
-                    Beverages
-                    <button className="ml-1 text-muted-foreground hover:text-foreground">×</button>
-                  </Badge>
-                  <Badge variant="outline" className="rounded-full px-3 py-1 border-primary/50">
-                    USA
-                    <button className="ml-1 text-muted-foreground hover:text-foreground">×</button>
-                  </Badge>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {activeFilters.length === 0 ? (
+                    <Badge variant="outline" className="rounded-full px-3 py-1 border-muted-foreground/40">
+                      All Products
+                    </Badge>
+                  ) : (
+                    activeFilters.map((filter) => (
+                      <Badge key={filter.label} variant="outline" className="rounded-full px-3 py-1 border-primary/50">
+                        {filter.label}
+                        <button className="ml-1 text-muted-foreground hover:text-foreground" onClick={filter.onRemove}>
+                          ×
+                        </button>
+                      </Badge>
+                    ))
+                  )}
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="icon" className="h-8 w-8">
+                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setViewMode("grid")}>
                       <Grid3X3 className="h-4 w-4" />
                     </Button>
-                    <Button variant="outline" size="icon" className="h-8 w-8">
+                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setViewMode("list")}>
                       <LayoutList className="h-4 w-4" />
                     </Button>
                   </div>
 
-                  <Select defaultValue="featured">
+                  <Select value={sort} onValueChange={setSort}>
                     <SelectTrigger className="w-full sm:w-[180px] h-8">
                       <SelectValue placeholder="Sort by" />
                     </SelectTrigger>
@@ -299,7 +401,7 @@ export default function ProductsPage() {
 
               {/* Products */}
               <Suspense fallback={<ProductsGridSkeleton />}>
-                <ProductsGrid />
+                <ProductsGrid products={products} loading={loadingProducts} viewMode={viewMode} />
               </Suspense>
 
               {/* Pagination */}
@@ -338,102 +440,28 @@ export default function ProductsPage() {
   )
 }
 
-function ProductsGrid() {
-  const products = [
-    {
-      id: 1,
-      name: "Premium Energy Drink",
-      image: "/placeholder.svg?height=400&width=400",
-      origin: "USA",
-      price: "₹350",
-      category: "Beverages",
-      tags: ["Best Seller", "Imported from USA"],
-    },
-    {
-      id: 2,
-      name: "Gourmet Chocolate Cookies",
-      image: "/placeholder.svg?height=400&width=400",
-      origin: "Belgium",
-      price: "₹450",
-      category: "Cookies",
-      tags: ["New Arrival", "Imported from Belgium"],
-    },
-    {
-      id: 3,
-      name: "Spicy Cheese Snacks",
-      image: "/placeholder.svg?height=400&width=400",
-      origin: "Mexico",
-      price: "₹250",
-      category: "Snacks",
-      tags: ["Limited Edition", "Imported from Mexico"],
-    },
-    {
-      id: 4,
-      name: "Protein Granola Bars",
-      image: "/placeholder.svg?height=400&width=400",
-      origin: "Australia",
-      price: "₹550",
-      category: "Protein",
-      tags: ["Best Seller", "Imported from Australia"],
-    },
-    {
-      id: 5,
-      name: "Exotic Fruit Juice",
-      image: "/placeholder.svg?height=400&width=400",
-      origin: "Thailand",
-      price: "₹280",
-      category: "Beverages",
-      tags: ["Exclusive", "Imported from Thailand"],
-    },
-    {
-      id: 6,
-      name: "Crunchy Breakfast Cereal",
-      image: "/placeholder.svg?height=400&width=400",
-      origin: "UK",
-      price: "₹650",
-      category: "Cereals",
-      tags: ["Only on Ambrosia", "Imported from UK"],
-    },
-    {
-      id: 7,
-      name: "Authentic Taco Shells",
-      image: "/placeholder.svg?height=400&width=400",
-      origin: "Mexico",
-      price: "₹320",
-      category: "Taco",
-      tags: ["Best Seller", "Imported from Mexico"],
-    },
-    {
-      id: 8,
-      name: "Chocolate Hazelnut Spread",
-      image: "/placeholder.svg?height=400&width=400",
-      origin: "Italy",
-      price: "₹480",
-      category: "Spreads",
-      tags: ["New Arrival", "Imported from Italy"],
-    },
-    {
-      id: 9,
-      name: "Premium Coffee Beans",
-      image: "/placeholder.svg?height=400&width=400",
-      origin: "Colombia",
-      price: "₹750",
-      category: "Beverages",
-      tags: ["Limited Edition", "Imported from Colombia"],
-    },
-  ]
+function ProductsGrid({ products, loading, viewMode }: { products: Product[]; loading: boolean; viewMode: "grid" | "list" }) {
+  if (loading) {
+    return <ProductsGridSkeleton />
+  }
+
+  if (products.length === 0) {
+    return <div className="text-center text-muted-foreground">No products found.</div>
+  }
+
+  const gridClass = viewMode === "list" ? "grid grid-cols-1 gap-6" : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className={gridClass}>
       {products.map((product) => (
-        <Link href={`/products/${product.id}`} key={product.id}>
+        <Link href={`/products/${product._id}`} key={product._id}>
           <Card className="product-card overflow-hidden border-border group h-full">
             <div className="relative h-64 overflow-hidden">
               <div className="absolute top-2 left-2 z-10 bg-black/80 text-white text-xs px-2 py-1 rounded">
-                {product.origin}
+                {product.origin || "Imported"}
               </div>
               <Image
-                src={product.image || "/placeholder.svg"}
+                src={product.image || product.images?.[0] || "/placeholder.svg"}
                 alt={product.name}
                 fill
                 className="object-cover transition-transform duration-500 group-hover:scale-110"
@@ -441,18 +469,20 @@ function ProductsGrid() {
             </div>
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-muted-foreground">{product.category}</span>
+                <span className="text-xs text-muted-foreground">{product.category || "Uncategorized"}</span>
               </div>
               <h3 className="font-semibold mb-2 group-hover:text-primary transition-colors">{product.name}</h3>
-              <div className="flex flex-wrap gap-1 mb-3">
-                {product.tags.map((tag, index) => (
-                  <span key={index} className="text-xs bg-muted px-2 py-0.5 rounded-full">
-                    {tag}
-                  </span>
-                ))}
-              </div>
+              {product.tags && product.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-3">
+                  {product.tags.map((tag) => (
+                    <span key={tag} className="text-xs bg-muted px-2 py-0.5 rounded-full">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
               <div className="flex items-center justify-between">
-                <span className="font-bold">{product.price}</span>
+                <span className="font-bold">{formatPrice(product.price)}</span>
                 <Button
                   variant="outline"
                   size="sm"
@@ -496,4 +526,3 @@ function ProductsGridSkeleton() {
     </div>
   )
 }
-

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Search, Plus, Filter, MoreHorizontal, Edit, Trash2, Eye, ArrowUpDown } from "lucide-react"
@@ -12,129 +12,108 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/hooks/use-toast"
+import type { Product } from "@/types/types"
 
-// Sample product data
-const initialProducts = [
-  {
-    id: 1,
-    name: "Premium Energy Drink",
-    image: "/placeholder.svg?height=100&width=100",
-    category: "Beverages",
-    origin: "USA",
-    price: 350,
-    stock: 120,
-    active: true,
-    featured: true,
-  },
-  {
-    id: 2,
-    name: "Gourmet Chocolate Cookies",
-    image: "/placeholder.svg?height=100&width=100",
-    category: "Cookies",
-    origin: "Belgium",
-    price: 450,
-    stock: 85,
-    active: true,
-    featured: false,
-  },
-  {
-    id: 3,
-    name: "Spicy Cheese Snacks",
-    image: "/placeholder.svg?height=100&width=100",
-    category: "Snacks",
-    origin: "Mexico",
-    price: 250,
-    stock: 200,
-    active: true,
-    featured: true,
-  },
-  {
-    id: 4,
-    name: "Protein Granola Bars",
-    image: "/placeholder.svg?height=100&width=100",
-    category: "Protein",
-    origin: "Australia",
-    price: 550,
-    stock: 65,
-    active: true,
-    featured: false,
-  },
-  {
-    id: 5,
-    name: "Exotic Fruit Juice",
-    image: "/placeholder.svg?height=100&width=100",
-    category: "Beverages",
-    origin: "Thailand",
-    price: 280,
-    stock: 150,
-    active: true,
-    featured: true,
-  },
-  {
-    id: 6,
-    name: "Crunchy Breakfast Cereal",
-    image: "/placeholder.svg?height=100&width=100",
-    category: "Cereals",
-    origin: "UK",
-    price: 650,
-    stock: 0,
-    active: false,
-    featured: false,
-  },
-  {
-    id: 7,
-    name: "Authentic Taco Shells",
-    image: "/placeholder.svg?height=100&width=100",
-    category: "Taco",
-    origin: "Mexico",
-    price: 320,
-    stock: 95,
-    active: true,
-    featured: false,
-  },
-  {
-    id: 8,
-    name: "Chocolate Hazelnut Spread",
-    image: "/placeholder.svg?height=100&width=100",
-    category: "Spreads",
-    origin: "Italy",
-    price: 480,
-    stock: 75,
-    active: true,
-    featured: true,
-  },
-]
+type ProductRow = Product & {
+  _id: string
+}
 
 export default function AdminProducts() {
   const { toast } = useToast()
-  const [products, setProducts] = useState(initialProducts)
+  const [products, setProducts] = useState<ProductRow[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
 
-  const toggleProductStatus = (id: number, field: "active" | "featured") => {
-    setProducts((prev) =>
-      prev.map((product) => (product.id === id ? { ...product, [field]: !product[field] } : product)),
-    )
+  const fetchProducts = useCallback(async () => {
+    try {
+      setLoading(true)
+      const response = await fetch("/api/products")
+      const data = await response.json()
+      setProducts(data)
+    } catch (error) {
+      console.error("Error fetching products:", error)
+      toast({
+        title: "Error",
+        description: "Failed to fetch products",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }, [toast])
 
-    toast({
-      title: `Product ${field === "active" ? "Status" : "Featured Status"} Updated`,
-      description: `The product has been ${field === "active" ? "activated/deactivated" : "featured/unfeatured"} successfully.`,
-    })
+  useEffect(() => {
+    fetchProducts()
+  }, [fetchProducts])
+
+  const toggleProductStatus = async (id: string, field: "active" | "featured") => {
+    const product = products.find((item) => item._id === id)
+    if (!product) return
+
+    const updatedValue = !Boolean(product[field])
+    setProducts((prev) => prev.map((item) => (item._id === id ? { ...item, [field]: updatedValue } : item)))
+
+    try {
+      const response = await fetch(`/api/products/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ [field]: updatedValue }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to update product status")
+      }
+
+      toast({
+        title: `Product ${field === "active" ? "Status" : "Featured Status"} Updated`,
+        description: `The product has been ${field === "active" ? "activated/deactivated" : "featured/unfeatured"} successfully.`,
+      })
+    } catch (error) {
+      console.error("Error updating product status:", error)
+      setProducts((prev) => prev.map((item) => (item._id === id ? { ...item, [field]: !updatedValue } : item)))
+      toast({
+        title: "Error",
+        description: "Failed to update product status",
+        variant: "destructive",
+      })
+    }
   }
 
-  const deleteProduct = (id: number) => {
-    setProducts((prev) => prev.filter((product) => product.id !== id))
+  const deleteProduct = async (id: string) => {
+    const previousProducts = products
+    setProducts((prev) => prev.filter((product) => product._id !== id))
 
-    toast({
-      title: "Product Deleted",
-      description: "The product has been deleted successfully.",
-    })
+    try {
+      const response = await fetch(`/api/products/${id}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to delete product")
+      }
+
+      toast({
+        title: "Product Deleted",
+        description: "The product has been deleted successfully.",
+      })
+    } catch (error) {
+      console.error("Error deleting product:", error)
+      setProducts(previousProducts)
+      toast({
+        title: "Error",
+        description: "Failed to delete product",
+        variant: "destructive",
+      })
+    }
   }
 
   const filteredProducts = products.filter(
     (product) =>
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.origin.toLowerCase().includes(searchTerm.toLowerCase()),
+      product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.origin?.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
   return (
@@ -187,7 +166,13 @@ export default function AdminProducts() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredProducts.length === 0 ? (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={9} className="h-24 text-center">
+                  Loading products...
+                </TableCell>
+              </TableRow>
+            ) : filteredProducts.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={9} className="h-24 text-center">
                   No products found.
@@ -195,23 +180,25 @@ export default function AdminProducts() {
               </TableRow>
             ) : (
               filteredProducts.map((product) => (
-                <TableRow key={product.id}>
+                <TableRow key={product._id}>
                   <TableCell>
                     <div className="relative h-10 w-10 rounded-md overflow-hidden">
                       <Image
-                        src={product.image || "/placeholder.svg"}
-                        alt={product.name}
+                        src={product.image || product.images?.[0] || "/placeholder.svg"}
+                        alt={product.name || "Product image"}
                         fill
                         className="object-cover"
                       />
                     </div>
                   </TableCell>
                   <TableCell className="font-medium">{product.name}</TableCell>
-                  <TableCell>{product.category}</TableCell>
-                  <TableCell>{product.origin}</TableCell>
-                  <TableCell className="text-right">₹{product.price}</TableCell>
+                  <TableCell>{product.category || "Uncategorized"}</TableCell>
+                  <TableCell>{product.origin || "—"}</TableCell>
+                  <TableCell className="text-right">
+                    {typeof product.price === "number" ? `₹${product.price}` : "—"}
+                  </TableCell>
                   <TableCell className="text-center">
-                    {product.stock > 0 ? (
+                    {typeof product.stock === "number" && product.stock > 0 ? (
                       product.stock > 50 ? (
                         <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
                           In Stock ({product.stock})
@@ -228,16 +215,10 @@ export default function AdminProducts() {
                     )}
                   </TableCell>
                   <TableCell className="text-center">
-                    <Switch
-                      checked={product.active}
-                      onCheckedChange={() => toggleProductStatus(product.id, "active")}
-                    />
+                    <Switch checked={Boolean(product.active)} onCheckedChange={() => toggleProductStatus(product._id, "active")} />
                   </TableCell>
                   <TableCell className="text-center">
-                    <Switch
-                      checked={product.featured}
-                      onCheckedChange={() => toggleProductStatus(product.id, "featured")}
-                    />
+                    <Switch checked={Boolean(product.featured)} onCheckedChange={() => toggleProductStatus(product._id, "featured")} />
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
@@ -249,19 +230,19 @@ export default function AdminProducts() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem asChild>
-                          <Link href={`/admin/products/${product.id}`}>
+                          <Link href={`/admin/products/${product._id}`}>
                             <Eye className="mr-2 h-4 w-4" />
                             View
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                          <Link href={`/admin/products/${product.id}/edit`}>
+                          <Link href={`/admin/products/${product._id}/edit`}>
                             <Edit className="mr-2 h-4 w-4" />
                             Edit
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => deleteProduct(product.id)}
+                          onClick={() => deleteProduct(product._id)}
                           className="text-destructive focus:text-destructive"
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
@@ -279,4 +260,3 @@ export default function AdminProducts() {
     </div>
   )
 }
-

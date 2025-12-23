@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import { format } from "date-fns"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
@@ -41,6 +42,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [period, setPeriod] = useState("last_month")
+  const [lastUpdated, setLastUpdated] = useState("")
   const [analytics, setAnalytics] = useState<Analytics>({
     pageViewsByMonth: [],
     pageViewsByPage: [],
@@ -112,12 +114,17 @@ export default function AdminDashboard() {
     setRefreshing(true)
     await Promise.all([fetchAnalytics(), fetchStats()])
     setRefreshing(false)
+    setLastUpdated(format(new Date(), "MMM d, yyyy p"))
 
     toast({
       title: "Refreshed",
       description: "Dashboard data has been refreshed",
     })
   }
+
+  useEffect(() => {
+    setLastUpdated(format(new Date(), "MMM d, yyyy p"))
+  }, [])
 
   // Format data for charts
   const formatMonthlyViewsData = () => {
@@ -179,7 +186,7 @@ export default function AdminDashboard() {
             <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
           </Button>
           <div className="text-sm text-muted-foreground">
-            Last updated: {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}
+            Last updated: {lastUpdated || "—"}
           </div>
         </div>
       </div>

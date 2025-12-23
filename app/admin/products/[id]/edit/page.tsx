@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
-import type { Category, Tag } from "@/types/types"
+import type { Category, Product, Tag } from "@/types/types"
 
 interface FormData {
   name: string
@@ -40,7 +40,7 @@ interface FormData {
   longDescription?: string
 }
 
-export default function NewProduct() {
+export default function EditProduct({ params }: { params: { id: string } }) {
   const router = useRouter()
   const { toast } = useToast()
 
@@ -71,6 +71,7 @@ export default function NewProduct() {
   const [images, setImages] = useState<string[]>([])
   const [imageUrlInput, setImageUrlInput] = useState("")
   const [loading, setLoading] = useState(false)
+  const [loadingProduct, setLoadingProduct] = useState(true)
   const [originSelect, setOriginSelect] = useState("")
   const [categories, setCategories] = useState<Category[]>([])
   const [originOptions, setOriginOptions] = useState<string[]>([])
@@ -106,11 +107,63 @@ export default function NewProduct() {
     }
   }, [])
 
+  const fetchProduct = useCallback(async () => {
+    try {
+      setLoadingProduct(true)
+      const response = await fetch(`/api/products/${params.id}`)
+      if (!response.ok) {
+        throw new Error("Product not found")
+      }
+      const data: Product = await response.json()
+      setFormData({
+        name: data.name || "",
+        description: data.description || "",
+        category: data.category || "",
+        subcategory: data.subcategory || "",
+        origin: data.origin || "",
+        price: data.price ? String(data.price) : "",
+        stock: data.stock ? String(data.stock) : "",
+        active: data.active ?? true,
+        featured: data.featured ?? false,
+        tags: data.tags || [],
+        nutritionalInfo: {
+          servingSize: data.nutritionalInfo?.servingSize || "",
+          calories: data.nutritionalInfo?.calories || "",
+          protein: data.nutritionalInfo?.protein || "",
+          carbs: data.nutritionalInfo?.carbs || "",
+          sugar: data.nutritionalInfo?.sugar || "",
+          fat: data.nutritionalInfo?.fat || "",
+        },
+        ingredients: data.ingredients || "",
+        longDescription: data.longDescription || "",
+      })
+      const imageList = data.images?.length ? data.images : []
+      const mergedImages = data.image && !imageList.includes(data.image) ? [data.image, ...imageList] : imageList
+      setImages(mergedImages)
+    } catch (error) {
+      console.error("Error fetching product:", error)
+      toast({
+        title: "Error",
+        description: "Failed to load product data",
+        variant: "destructive",
+      })
+    } finally {
+      setLoadingProduct(false)
+    }
+  }, [params.id, toast])
+
   useEffect(() => {
     fetchCategories()
     fetchOrigins()
     fetchTags()
-  }, [fetchCategories, fetchOrigins, fetchTags])
+    fetchProduct()
+  }, [fetchCategories, fetchOrigins, fetchTags, fetchProduct])
+
+  useEffect(() => {
+    if (formData.origin) {
+      setOriginSelect(originOptions.includes(formData.origin) ? formData.origin : "other")
+    }
+  }, [formData.origin, originOptions])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -183,8 +236,8 @@ export default function NewProduct() {
         image: images[0] || "",
       }
 
-      const response = await fetch("/api/products", {
-        method: "POST",
+      const response = await fetch(`/api/products/${params.id}`, {
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
@@ -193,23 +246,27 @@ export default function NewProduct() {
 
       if (response.ok) {
         toast({
-          title: "Product Created",
-          description: "The product has been created successfully.",
+          title: "Product Updated",
+          description: "The product has been updated successfully.",
         })
         router.push("/admin/products")
       } else {
-        throw new Error("Failed to create product")
+        throw new Error("Failed to update product")
       }
     } catch (error) {
-      console.error("Error creating product:", error)
+      console.error("Error updating product:", error)
       toast({
         title: "Error",
-        description: "Failed to create product",
+        description: "Failed to update product",
         variant: "destructive",
       })
     } finally {
       setLoading(false)
     }
+  }
+
+  if (loadingProduct) {
+    return <div className="p-6 text-muted-foreground">Loading product...</div>
   }
 
   const selectedCategory = categories.find((category) => category.slug === formData.category)
@@ -221,7 +278,7 @@ export default function NewProduct() {
         <Button variant="outline" size="icon" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <h1 className="text-3xl font-bold">Add New Product</h1>
+        <h1 className="text-3xl font-bold">Edit Product</h1>
       </div>
 
       <form onSubmit={handleSubmit}>
@@ -253,11 +310,7 @@ export default function NewProduct() {
                 <Label htmlFor="category">
                   Category <span className="text-destructive">*</span>
                 </Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(value) => handleSelectChange("category", value)}
-                  required
-                >
+                <Select value={formData.category} onValueChange={(value) => handleSelectChange("category", value)} required>
                   <SelectTrigger id="category">
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
@@ -450,9 +503,7 @@ export default function NewProduct() {
               {images.length === 0 ? (
                 <div className="border border-dashed rounded-lg p-12 text-center">
                   <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-muted-foreground">
-                    No images added yet. Click &quot;Add Image&quot; to upload product images.
-                  </p>
+                  <p className="text-muted-foreground">No images added yet.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -643,20 +694,20 @@ export default function NewProduct() {
         </Tabs>
 
         <div className="flex justify-end gap-4 mt-8">
-          <Button type="button" variant="outline" onClick={() => router.back()}>
+          <Button variant="outline" type="button" onClick={() => router.back()} disabled={loading}>
             Cancel
           </Button>
-          <Button type="submit" className="gold-gradient text-black font-semibold" disabled={loading}>
+          <Button type="submit" disabled={loading}>
             {loading ? (
-              <span className="flex items-center gap-2">
-                <span className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+              <>
+                <Save className="mr-2 h-4 w-4 animate-spin" />
                 Saving...
-              </span>
+              </>
             ) : (
-              <span className="flex items-center gap-2">
-                <Save className="h-4 w-4" />
-                Save Product
-              </span>
+              <>
+                <Save className="mr-2 h-4 w-4" />
+                Save Changes
+              </>
             )}
           </Button>
         </div>

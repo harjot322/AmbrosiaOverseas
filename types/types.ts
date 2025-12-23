@@ -25,15 +25,30 @@ export interface Subcategory {
     slug: string
   }
   
-  export interface Product {
+export interface Product {
     _id: string
     name: string
-    description: string
-    price: number
-    category: string
-    subcategory: string
-    tags: string[]
-    images: string[]
+    description?: string
+    longDescription?: string
+    price?: number
+    category?: string
+    subcategory?: string
+    origin?: string
+    stock?: number
+    active?: boolean
+    featured?: boolean
+    tags?: string[]
+    image?: string
+    images?: string[]
+    nutritionalInfo?: {
+      servingSize?: string
+      calories?: string
+      protein?: string
+      carbs?: string
+      sugar?: string
+      fat?: string
+    }
+    ingredients?: string
     createdAt?: Date
     updatedAt?: Date
   }

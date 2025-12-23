@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Image from "next/image"
 import { Mail, Phone, MapPin, Send } from "lucide-react"
 
@@ -18,6 +18,16 @@ import { OpenStreetMap } from "@/components/open-street-map"
 const customMarkerIcon = "/custom-marker.png"
 export default function ContactPage() {
   const { toast } = useToast()
+  const [settings, setSettings] = useState({
+    contactEmail: "ambrosiaoverseas.an@gmail.com",
+    contactPhone: "+91 8287587442",
+    address: "Ambrosia Overseas, 4420 Gali Bahu Ji, Sadar Bazar Delhi-110006",
+    contactHeroTitle: "Contact Us",
+    contactHeroSubtitle: "We'd love to hear from you. Reach out to us with any questions or inquiries.",
+    contactHeroImage: "/placeholder.svg?height=400&width=1920",
+    mapLatitude: 28.658979,
+    mapLongitude: 77.211914,
+  })
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -26,6 +36,28 @@ export default function ContactPage() {
     message: "",
   })
   const [loading, setLoading] = useState(false)
+  const mapLatitude = Number(settings.mapLatitude) || 28.658979
+  const mapLongitude = Number(settings.mapLongitude) || 77.211914
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await fetch("/api/settings")
+        if (!response.ok) return
+        const data = await response.json()
+        if (data) {
+          setSettings((prev) => ({
+            ...prev,
+            ...data,
+          }))
+        }
+      } catch (error) {
+        console.error("Error fetching settings:", error)
+      }
+    }
+
+    fetchSettings()
+  }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -36,14 +68,23 @@ export default function ContactPage() {
     setFormData((prev) => ({ ...prev, subject: value }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
-    // In a real app, this would send the data to your backend
-    // For this demo, we'll simulate an API call
-    setTimeout(() => {
-      setLoading(false)
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to send message")
+      }
+
       toast({
         title: "Message Sent",
         description: "Thank you for contacting us. We'll get back to you soon!",
@@ -55,7 +96,16 @@ export default function ContactPage() {
         subject: "",
         message: "",
       })
-    }, 1500)
+    } catch (error) {
+      console.error("Error sending message:", error)
+      toast({
+        title: "Error",
+        description: "Failed to send your message. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -66,18 +116,23 @@ export default function ContactPage() {
         {/* Hero Banner */}
         <div className="relative h-64 md:h-80 bg-black text-white">
           <Image
-            src="/placeholder.svg?height=400&width=1920"
+            src={settings.contactHeroImage}
             alt="Contact Us"
             fill
             className="object-cover opacity-60"
           />
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
             <h1 className="text-3xl md:text-5xl font-bold mb-4">
-              Contact <span className="gold-text">Us</span>
+              {settings.contactHeroTitle.split(" ").length > 1 ? (
+                <>
+                  {settings.contactHeroTitle.split(" ")[0]}{" "}
+                  <span className="gold-text">{settings.contactHeroTitle.split(" ").slice(1).join(" ")}</span>
+                </>
+              ) : (
+                <span className="gold-text">{settings.contactHeroTitle}</span>
+              )}
             </h1>
-            <p className="max-w-2xl text-gray-300">
-              We&apos;d love to hear from you. Reach out to us with any questions or inquiries.
-            </p>
+            <p className="max-w-2xl text-gray-300">{settings.contactHeroSubtitle}</p>
           </div>
         </div>
 
@@ -105,7 +160,7 @@ export default function ContactPage() {
                     <div>
                       <h3 className="font-semibold mb-1">Address</h3>
                       <p className="text-muted-foreground">
-                        Ambrosia Overseas, 4420 Gali Bahu Ji, Sadar Bazar Delhi-110006
+                        {settings.address}
                       </p>
                     </div>
                   </div>
@@ -116,7 +171,7 @@ export default function ContactPage() {
                     </div>
                     <div>
                       <h3 className="font-semibold mb-1">Phone</h3>
-                      <p className="text-muted-foreground">+91 8287587442</p>
+                      <p className="text-muted-foreground">{settings.contactPhone}</p>
                     </div>
                   </div>
 
@@ -126,7 +181,7 @@ export default function ContactPage() {
                     </div>
                     <div>
                       <h3 className="font-semibold mb-1">Email</h3>
-                      <p className="text-muted-foreground">ambrosiaoverseas.an@gmail.com</p>
+                      <p className="text-muted-foreground">{settings.contactEmail}</p>
                     </div>
                   </div>
                 </div>
@@ -264,17 +319,17 @@ export default function ContactPage() {
 
             <div className="rounded-lg overflow-hidden h-[400px] relative">
               <OpenStreetMap
-                latitude={28.658979}
-                longitude={77.211914}
+                latitude={mapLatitude}
+                longitude={mapLongitude}
                 zoom={17}
-                markerTitle="Ambrosia Overseas, 4420 Gali Bahu Ji, Sadar Bazar Delhi-110006"
+                markerTitle={settings.address}
                 customMarker={customMarkerIcon}
               />
             </div>
 
             <div className="text-center mt-4">
               <a
-                href="https://www.openstreetmap.org/?mlat=28.658979&mlon=77.211914#map=17/28.658979/77.211914&layers=N"
+                href={`https://www.openstreetmap.org/?mlat=${mapLatitude}&mlon=${mapLongitude}#map=17/${mapLatitude}/${mapLongitude}&layers=N`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm text-primary hover:underline"

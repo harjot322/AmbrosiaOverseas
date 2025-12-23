@@ -23,9 +23,24 @@ export async function getDb() {
 }
 
 // Products
-export async function getProducts(filters = {}) {
+export async function getProducts(
+  filters = {},
+  options: { sort?: Record<string, 1 | -1>; limit?: number; skip?: number } = {},
+) {
   const db = await getDb()
-  return db.collection(COLLECTIONS.PRODUCTS).find(filters).toArray()
+  let query = db.collection(COLLECTIONS.PRODUCTS).find(filters)
+
+  if (options.sort) {
+    query = query.sort(options.sort)
+  }
+  if (typeof options.skip === "number") {
+    query = query.skip(options.skip)
+  }
+  if (typeof options.limit === "number") {
+    query = query.limit(options.limit)
+  }
+
+  return query.toArray()
 }
 
 export async function getProductById(id: string) {
