@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
@@ -53,23 +53,7 @@ export default function AdminDashboard() {
     interactions: { count: 0, change: 0 },
   })
 
-  useEffect(() => {
-    fetchAnalytics()
-    fetchStats()
-
-    // Set up auto-refresh every 5 minutes
-    const refreshInterval = setInterval(
-      () => {
-        fetchAnalytics()
-        fetchStats()
-      },
-      5 * 60 * 1000,
-    )
-
-    return () => clearInterval(refreshInterval)
-  }, [period])
-
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = useCallback(async () => {
     try {
       setLoading(true)
       const response = await fetch(`/api/analytics?period=${period}`)
@@ -88,9 +72,9 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [period, toast])
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const response = await fetch(`/api/analytics?type=stats&period=${period}`)
       const data = await response.json()
@@ -106,7 +90,23 @@ export default function AdminDashboard() {
         variant: "destructive",
       })
     }
-  }
+  }, [period, toast])
+
+  useEffect(() => {
+    fetchAnalytics()
+    fetchStats()
+
+    // Set up auto-refresh every 5 minutes
+    const refreshInterval = setInterval(
+      () => {
+        fetchAnalytics()
+        fetchStats()
+      },
+      5 * 60 * 1000,
+    )
+
+    return () => clearInterval(refreshInterval)
+  }, [fetchAnalytics, fetchStats])
 
   const handleRefresh = async () => {
     setRefreshing(true)

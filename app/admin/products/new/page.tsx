@@ -317,7 +317,7 @@ export default function NewProduct() {
                 <div className="border border-dashed rounded-lg p-12 text-center">
                   <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
                   <p className="text-muted-foreground">
-                    No images added yet. Click "Add Image" to upload product images.
+                    No images added yet. Click &quot;Add Image&quot; to upload product images.
                   </p>
                 </div>
               ) : (
@@ -325,6 +325,7 @@ export default function NewProduct() {
                   {images.map((image, index) => (
                     <Card key={index} className="overflow-hidden">
                       <div className="relative aspect-square">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={image || "/placeholder.svg"}
                           alt={`Product image ${index + 1}`}

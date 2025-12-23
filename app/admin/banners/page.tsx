@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect } from "react"
+/* eslint-disable @next/next/no-img-element */
+import { useState, useEffect, useCallback } from "react"
 import { Plus, Edit, Trash2, LinkIcon, ExternalLink, ImageIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -35,11 +36,7 @@ export default function BannersPage() {
   })
   const [editBanner, setEditBanner] = useState<Banner | null>(null)
 
-  useEffect(() => {
-    fetchBanners()
-  }, [])
-
-  const fetchBanners = async () => {
+  const fetchBanners = useCallback(async () => {
     try {
       setLoading(true)
       const response = await fetch("/api/banners")
@@ -55,7 +52,11 @@ export default function BannersPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast])
+
+  useEffect(() => {
+    fetchBanners()
+  }, [fetchBanners])
 
   const handleCreateBanner = async () => {
     try {

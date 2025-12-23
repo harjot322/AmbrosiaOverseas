@@ -208,7 +208,7 @@ export default function CartPage() {
               </div>
               <h2 className="text-2xl font-semibold">Your cart is empty</h2>
               <p className="text-muted-foreground max-w-md mx-auto">
-                Looks like you haven't added any products to your cart yet.
+                Looks like you haven&apos;t added any products to your cart yet.
               </p>
               <Button asChild className="mt-4 gold-gradient text-black font-semibold">
                 <Link href="/products">
@@ -225,4 +225,3 @@ export default function CartPage() {
     </main>
   )
 }
-

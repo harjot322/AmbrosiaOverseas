@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Plus, Edit, Trash2, ChevronRight, ChevronDown, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,11 +29,7 @@ export default function CategoriesPage() {
   const [editSubcategory, setEditSubcategory] = useState<Subcategory | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  useEffect(() => {
-    fetchCategories()
-  }, [])
-
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       setLoading(true)
       const response = await fetch("/api/categories")
@@ -49,7 +45,11 @@ export default function CategoriesPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast])
+
+  useEffect(() => {
+    fetchCategories()
+  }, [fetchCategories])
 
   const toggleCategory = (categoryId: string) => {
     setExpandedCategories((prev) =>
