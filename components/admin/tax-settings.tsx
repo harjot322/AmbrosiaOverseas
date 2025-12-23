@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -19,21 +19,17 @@ export function TaxSettings() {
     pricesIncludeGST: false,
   })
 
-  useEffect(() => {
-    fetchTaxSettings()
-  }, [])
-
-  const fetchTaxSettings = async () => {
+  const fetchTaxSettings = useCallback(async () => {
     try {
       setLoading(true)
       const response = await fetch("/api/config?type=tax")
       const data = await response.json()
 
       if (data && Object.keys(data).length > 0) {
-        setTaxSettings({
-          ...taxSettings,
+        setTaxSettings((prev) => ({
+          ...prev,
           ...data,
-        })
+        }))
       }
     } catch (error) {
       console.error("Error fetching tax settings:", error)
@@ -46,7 +42,11 @@ export function TaxSettings() {
       setLoading(false)
       setInitialLoad(false)
     }
-  }
+  }, [toast])
+
+  useEffect(() => {
+    fetchTaxSettings()
+  }, [fetchTaxSettings])
 
   const handleSave = async () => {
     try {
@@ -152,4 +152,3 @@ export function TaxSettings() {
     </Card>
   )
 }
-

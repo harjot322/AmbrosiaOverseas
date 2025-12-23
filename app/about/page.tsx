@@ -41,7 +41,9 @@ export default function AboutPage() {
                   Our <span className="gold-text">Story</span>
                 </h2>
                 <p className="text-muted-foreground">
-                Ambrosia Overseas was founded in 2024 with a simple mission: to bring the finest imported food products from around the world to Indian consumers. What started as a small passion project has now grown into one of India's leading retailers of gourmet and specialty food items.
+                  Ambrosia Overseas was founded in 2024 with a simple mission: to bring the finest imported food
+                  products from around the world to Indian consumers. What started as a small passion project has now
+                  grown into one of India&apos;s leading retailers of gourmet and specialty food items.
                 </p>
                 <p className="text-muted-foreground">
                   Our founder, Ayansh Jaiswal, traveled extensively and was always fascinated by the diverse flavors and
@@ -65,8 +67,8 @@ export default function AboutPage() {
               Our <span className="gold-text">Mission</span>
             </h2>
             <p className="text-xl max-w-3xl mx-auto text-gray-300">
-              "To introduce Indian consumers to the finest global flavors and food products, curated with passion and
-              delivered with excellence."
+              &ldquo;To introduce Indian consumers to the finest global flavors and food products, curated with passion
+              and delivered with excellence.&rdquo;
             </p>
           </div>
         </section>
@@ -186,4 +188,3 @@ export default function AboutPage() {
     </main>
   )
 }
-

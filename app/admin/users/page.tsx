@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Plus, Edit, Trash2, Search, Filter, ArrowUpDown, MoreHorizontal, Eye, UserCog } from "lucide-react"
 import { User } from "@/types/types" 
 import { Button } from "@/components/ui/button"
@@ -37,11 +37,7 @@ export default function UsersPage() {
     updatedAt: undefined,
   })
 
-  useEffect(() => {
-    fetchUsers()
-  }, [])
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true)
       const response = await fetch("/api/users")
@@ -57,7 +53,11 @@ export default function UsersPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast])
+
+  useEffect(() => {
+    fetchUsers()
+  }, [fetchUsers])
 
   const handleCreateUser   = async () => {
     try {

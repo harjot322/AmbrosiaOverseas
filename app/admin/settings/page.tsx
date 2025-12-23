@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -36,30 +36,26 @@ export default function SettingsPage() {
     customCss: "",
   })
 
-  useEffect(() => {
-    fetchSettings()
-  }, [])
-
-  const fetchSettings = async () => {
+  const fetchSettings = useCallback(async () => {
     try {
       setLoading(true)
       const response = await fetch("/api/settings")
       const data = await response.json()
 
       if (data && Object.keys(data).length > 0) {
-        // Ensure socialLinks exists
-        if (!data.socialLinks) {
-          data.socialLinks = {
+        const normalizedData = {
+          ...data,
+          socialLinks: data.socialLinks ?? {
             facebook: "",
             instagram: "",
             twitter: "",
-          }
+          },
         }
 
-        setSettings({
-          ...settings,
-          ...data,
-        })
+        setSettings((prev) => ({
+          ...prev,
+          ...normalizedData,
+        }))
       }
     } catch (error) {
       console.error("Error fetching settings:", error)
@@ -72,7 +68,11 @@ export default function SettingsPage() {
       setLoading(false)
       setInitialLoad(false)
     }
-  }
+  }, [toast])
+
+  useEffect(() => {
+    fetchSettings()
+  }, [fetchSettings])
 
   const handleSaveSettings = async () => {
     try {
@@ -330,4 +330,3 @@ export default function SettingsPage() {
     </div>
   )
 }
-

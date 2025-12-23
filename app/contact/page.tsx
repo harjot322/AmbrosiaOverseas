@@ -76,7 +76,7 @@ export default function ContactPage() {
               Contact <span className="gold-text">Us</span>
             </h1>
             <p className="max-w-2xl text-gray-300">
-              We'd love to hear from you. Reach out to us with any questions or inquiries.
+              We&apos;d love to hear from you. Reach out to us with any questions or inquiries.
             </p>
           </div>
         </div>
@@ -92,8 +92,8 @@ export default function ContactPage() {
                     Get in <span className="gold-text">Touch</span>
                   </h2>
                   <p className="text-muted-foreground">
-                    Have questions about our products or services? We're here to help. Contact us using any of the
-                    methods below or fill out the form and we'll get back to you as soon as possible.
+                    Have questions about our products or services? We&apos;re here to help. Contact us using any of the
+                    methods below or fill out the form and we&apos;ll get back to you as soon as possible.
                   </p>
                 </div>
 
@@ -290,4 +290,3 @@ export default function ContactPage() {
     </main>
   )
 }
-

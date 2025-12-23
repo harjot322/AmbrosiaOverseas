@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { format } from "date-fns"
 import { Mail, Eye, Trash2, Search, Filter, ArrowUpDown, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -35,21 +35,7 @@ export default function MessagesPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
 
-  useEffect(() => {
-    fetchMessages()
-
-    // Set up auto-refresh every 5 minutes
-    const refreshInterval = setInterval(
-      () => {
-        fetchMessages()
-      },
-      5 * 60 * 1000,
-    )
-
-    return () => clearInterval(refreshInterval)
-  }, [])
-
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     try {
       setLoading(true)
       const response = await fetch("/api/contact")
@@ -65,7 +51,21 @@ export default function MessagesPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast])
+
+  useEffect(() => {
+    fetchMessages()
+
+    // Set up auto-refresh every 5 minutes
+    const refreshInterval = setInterval(
+      () => {
+        fetchMessages()
+      },
+      5 * 60 * 1000,
+    )
+
+    return () => clearInterval(refreshInterval)
+  }, [fetchMessages])
 
   const handleRefresh = async () => {
     setRefreshing(true)

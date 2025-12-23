@@ -26,16 +26,16 @@ export function Footer() {
         if (response.ok) {
           const data = await response.json()
           if (data) {
-            setSettings({
-              contactEmail: data.contactEmail || settings.contactEmail,
-              contactPhone: data.contactPhone || settings.contactPhone,
-              address: data.address || settings.address,
+            setSettings((prev) => ({
+              contactEmail: data.contactEmail || prev.contactEmail,
+              contactPhone: data.contactPhone || prev.contactPhone,
+              address: data.address || prev.address,
               socialLinks: {
                 facebook: data.socialLinks?.facebook || "",
                 instagram: data.socialLinks?.instagram || "",
                 twitter: data.socialLinks?.twitter || "",
               },
-            })
+            }))
           }
         }
       } catch (error) {
@@ -190,4 +190,3 @@ export function Footer() {
     </footer>
   )
 }
-
