@@ -251,15 +251,19 @@ export default function ProductsPage() {
                                 </label>
                               </div>
                               {category.subcategories?.length > 0 && (
-                                <div className="pl-6 space-y-1">
+                                <div className="relative mt-2 ml-2 pl-3 border-l border-border/60 space-y-2">
                                   {category.subcategories.map((subcategory) => (
-                                    <div key={subcategory.slug} className="flex items-center space-x-2">
+                                    <div key={subcategory.slug} className="relative flex items-center space-x-2 pl-3">
+                                      <span className="absolute left-0 top-1/2 h-px w-2 -translate-y-1/2 bg-border/60" />
+                                      <span className="absolute -left-[6px] top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-border/70" />
                                       <Checkbox
                                         id={`subcategory-${subcategory.slug}`}
                                         checked={selectedSubcategories.includes(subcategory.slug)}
                                         onCheckedChange={() =>
                                           toggleItem(subcategory.slug, selectedSubcategories, setSelectedSubcategories)
                                         }
+                                        hideIndicator
+                                        className="relative h-4 w-4 rounded-none border-none bg-transparent data-[state=checked]:bg-transparent before:absolute before:left-1/2 before:top-1/2 before:h-0 before:w-0 before:-translate-x-1/2 before:-translate-y-1/2 before:border-l-[6px] before:border-r-[6px] before:border-b-[10px] before:border-l-transparent before:border-r-transparent before:border-b-primary/40 after:absolute after:left-1/2 after:top-1/2 after:h-0 after:w-0 after:-translate-x-1/2 after:-translate-y-1/2 after:border-l-[5px] after:border-r-[5px] after:border-b-[8px] after:border-l-transparent after:border-r-transparent after:border-b-background data-[state=checked]:after:border-b-primary"
                                       />
                                       <label
                                         htmlFor={`subcategory-${subcategory.slug}`}
