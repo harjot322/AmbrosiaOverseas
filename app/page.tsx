@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { ArrowRight, Star, TrendingUp, Award, Globe } from "lucide-react"
@@ -83,6 +83,8 @@ export default function Home() {
   const heroSubtitle = heroBanner?.subtitle || settings.homeHeroSubtitle
   const heroImage = heroBanner?.imageUrl || settings.homeHeroImage
   const heroLink = heroBanner?.linkUrl || settings.homeCtaButtonLink
+  const defaultHeroTitle = "Your Gateway To Global Snacks & Sips"
+  const useAnimatedHero = heroTitle === defaultHeroTitle
 
   const whyChooseItems = Array.isArray(settings.homeWhyChoose) && settings.homeWhyChoose.length > 0
     ? settings.homeWhyChoose.map((item: { title: string; description: string }, index: number) => ({
@@ -96,12 +98,13 @@ export default function Home() {
       <Navbar />
 
       {/* Hero Section */}
-      <section className="relative h-screen flex items-center justify-center bg-black text-white overflow-hidden">
+      <section className="relative h-screen flex items-center justify-center bg-black text-white overflow-hidden section-divider">
         <div className="absolute inset-0 z-0">
           <Image
             src={heroImage}
             alt="Premium imported foods"
             fill
+            sizes="100vw"
             className="object-cover opacity-50"
             priority
           />
@@ -109,12 +112,20 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/70 z-10"></div>
 
         <div className="container relative z-20 text-center space-y-6 px-4 animate-fade-in">
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight">
-            <span className="gold-text">{heroTitle}</span>
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight heading-premium">
+            <span className="gold-text">
+              {useAnimatedHero ? (
+                <>
+                  Your Gateway To Global <RotatingWord />
+                </>
+              ) : (
+                heroTitle
+              )}
+            </span>
           </h1>
-          <p className="text-lg md:text-xl max-w-3xl mx-auto text-gray-300">{heroSubtitle}</p>
+          <p className="text-lg md:text-xl max-w-3xl mx-auto text-gray-300 text-balance">{heroSubtitle}</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-            <Button asChild size="lg" className="gold-gradient text-black font-semibold">
+            <Button asChild size="lg" className="gold-gradient text-black font-semibold sheen-button">
               <Link href={heroLink}>Explore Products</Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="border-white text-gold hover:bg-white/10">
@@ -125,7 +136,7 @@ export default function Home() {
       </section>
 
       {/* Featured Categories */}
-      <section className="py-20 bg-gradient-to-b from-black to-background">
+      <section className="py-20 bg-gradient-to-b from-black to-background section-divider">
         <div className="container px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
@@ -139,48 +150,58 @@ export default function Home() {
           {featuredBanners.length === 0 ? (
             <div className="text-center text-muted-foreground">No featured categories configured yet.</div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-              {featuredBanners.map((category, index) => (
-                <Link
-                  href={category.linkUrl || "/products"}
-                  key={category._id || index}
-                  className="group overflow-hidden rounded-lg border bg-card text-card-foreground shadow transition-all duration-300 hover:shadow-lg hover:border-primary"
-                >
-                  <div className="relative h-48 overflow-hidden">
-                    <Image
-                      src={category.imageUrl || "/placeholder.svg"}
-                      alt={category.title}
-                      fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-110"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
-                    <h3 className="absolute bottom-4 left-4 text-xl font-semibold text-white">{category.title}</h3>
-                  </div>
-                  <div className="p-4">
-                    <p className="text-muted-foreground mb-4">{category.subtitle}</p>
-                    <div className="flex items-center text-primary font-medium">
-                      <span>Explore Products</span>
-                      <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+            <div
+              className="marquee"
+              style={
+                {
+                  "--marquee-duration": `${Math.max(18, featuredBanners.length * 6) * 0.8}s`,
+                } as React.CSSProperties
+              }
+            >
+              <div className="marquee-track">
+                {[...featuredBanners, ...featuredBanners].map((category, index) => (
+                  <Link
+                    href={category.linkUrl || "/products"}
+                    key={`${category._id || "banner"}-${index}`}
+                    className="group overflow-hidden rounded-lg border bg-card text-card-foreground shadow transition-all duration-300 hover:shadow-lg hover:border-primary glass-panel min-w-[260px] sm:min-w-[320px] lg:min-w-[360px]"
+                  >
+                    <div className="relative h-48 overflow-hidden image-frame">
+                      <Image
+                        src={category.imageUrl || "/placeholder.svg"}
+                        alt={category.title}
+                        fill
+                        sizes="(min-width: 1024px) 360px, (min-width: 640px) 320px, 260px"
+                        className="object-cover transition-transform duration-500 group-hover:scale-110"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+                      <h3 className="absolute bottom-4 left-4 text-xl font-semibold text-white">{category.title}</h3>
                     </div>
-                  </div>
-                </Link>
-              ))}
+                    <div className="p-4">
+                      <p className="text-muted-foreground mb-4">{category.subtitle}</p>
+                      <div className="flex items-center text-primary font-medium">
+                        <span>Explore Products</span>
+                        <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
             </div>
           )}
         </div>
       </section>
 
       {/* Featured Products */}
-      <section className="py-20 bg-background">
+      <section className="py-20 bg-background section-divider">
         <div className="container px-4">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 heading-premium">
               <span className="gold-text">Featured</span> Products
             </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-muted-foreground max-w-2xl mx-auto text-balance">
               Our most popular premium imported products, handpicked for exceptional quality and taste.
             </p>
-            <Link href="/products" className="inline-flex items-center text-primary font-medium mt-6">
+            <Link href="/products" className="inline-flex items-center text-primary font-medium mt-6 sheen-button">
               <span>View All Products</span>
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
@@ -189,10 +210,10 @@ export default function Home() {
           {featuredProducts.length === 0 ? (
             <div className="text-center text-muted-foreground">No featured products yet.</div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 reveal-stagger">
               {featuredProducts.map((product) => (
-                <Card key={product._id} className="product-card overflow-hidden border-border group">
-                  <div className="relative h-64 overflow-hidden">
+                <Card key={product._id} className="product-card overflow-hidden border-border group glass-panel">
+                  <div className="relative h-64 overflow-hidden image-frame">
                     <div className="absolute top-2 left-2 z-10 bg-black/80 text-white text-xs px-2 py-1 rounded">
                       Imported from {product.origin || "Global"}
                     </div>
@@ -200,6 +221,7 @@ export default function Home() {
                       src={product.image || product.images?.[0] || "/placeholder.svg"}
                       alt={product.name}
                       fill
+                      sizes="(min-width: 1024px) 22vw, (min-width: 640px) 40vw, 90vw"
                       className="object-cover transition-transform duration-500 group-hover:scale-110"
                     />
                   </div>
@@ -235,13 +257,13 @@ export default function Home() {
       </section>
 
       {/* Countries Section */}
-      <section className="py-20 bg-black text-white">
+      <section className="py-20 bg-black text-white section-divider">
         <div className="container px-4">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 heading-premium">
               <span className="gold-text">Global</span> Flavors
             </h2>
-            <p className="text-gray-400 max-w-2xl mx-auto">
+            <p className="text-gray-400 max-w-2xl mx-auto text-balance">
               We source our premium products from the finest producers across the globe.
             </p>
           </div>
@@ -251,7 +273,7 @@ export default function Home() {
               <Link
                 key={country}
                 href={`/products?origin=${encodeURIComponent(country)}`}
-                className="flex flex-col items-center p-4 bg-card/10 rounded-lg hover:bg-card/20 transition-colors"
+                className="flex flex-col items-center p-4 bg-card/10 rounded-lg hover:bg-card/20 transition-colors glass-panel"
               >
                 <Globe className="h-10 w-10 text-primary mb-3" />
                 <span className="font-medium">{country}</span>
@@ -262,13 +284,13 @@ export default function Home() {
       </section>
 
       {/* Why Choose Us */}
-      <section className="py-20 bg-gradient-to-b from-background to-black text-white">
+      <section className="py-20 bg-gradient-to-b from-background to-black text-white section-divider">
         <div className="container px-4">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 heading-premium">
               Why Choose <span className="gold-text">Ambrosia Overseas</span>
             </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-muted-foreground max-w-2xl mx-auto text-balance">
               We are committed to bringing you the finest imported food products with unmatched quality and service.
             </p>
           </div>
@@ -277,7 +299,7 @@ export default function Home() {
             {whyChooseItems.map((feature, index) => (
               <div
                 key={feature.key || index}
-                className="bg-card/10 p-6 rounded-lg border border-border/50 hover:border-primary/50 transition-all duration-300"
+                className="bg-card/10 p-6 rounded-lg border border-border/50 hover:border-primary/50 transition-all duration-300 glass-panel"
               >
                 <div className="mb-4">{feature.icon}</div>
                 <h3 className="text-xl font-semibold mb-3">{feature.title}</h3>
@@ -291,7 +313,7 @@ export default function Home() {
       {/* CTA Section */}
       <section className="py-20 bg-black">
         <div className="container px-4">
-          <div className="bg-gradient-to-r from-black via-card to-black p-8 md:p-12 rounded-xl border border-primary/20 text-center">
+          <div className="bg-gradient-to-r from-black via-card to-black p-8 md:p-12 rounded-xl border border-primary/20 text-center glass-panel">
             <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
               {settings.homeCtaTitle.split("Premium").length > 1 ? (
                 <>
@@ -312,5 +334,48 @@ export default function Home() {
 
       <Footer />
     </main>
+  )
+}
+
+function RotatingWord() {
+  const words = useMemo(() => ["Snacks", "Sips", "Chocolates", "Muffins", "Cereals", "Candies"], [])
+  const [wordIndex, setWordIndex] = useState(0)
+  const [charIndex, setCharIndex] = useState(words[0].length)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  useEffect(() => {
+    const currentWord = words[wordIndex]
+    const speed = isDeleting ? 55 : 90
+    const pause = isDeleting ? 400 : 900
+
+    const timeout = setTimeout(() => {
+      if (!isDeleting && charIndex === currentWord.length) {
+        setIsDeleting(true)
+        return
+      }
+      if (isDeleting && charIndex === 0) {
+        setIsDeleting(false)
+        setWordIndex((prev) => (prev + 1) % words.length)
+        return
+      }
+
+      setCharIndex((prev) => prev + (isDeleting ? -1 : 1))
+    }, charIndex === currentWord.length || charIndex === 0 ? pause : speed)
+
+    return () => clearTimeout(timeout)
+  }, [charIndex, isDeleting, wordIndex, words])
+
+  const currentWord = words[wordIndex]
+  const visible = currentWord.slice(0, charIndex)
+  const lastIndex = visible.length - 1
+
+  return (
+    <span className="inline-flex">
+      {visible.split("").map((char, index) => (
+        <span key={`${wordIndex}-${index}`} className={index === lastIndex ? "type-fade" : undefined}>
+          {char}
+        </span>
+      ))}
+    </span>
   )
 }

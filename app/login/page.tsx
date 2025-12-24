@@ -227,7 +227,7 @@ export default function LoginPage() {
           <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 items-center">
             <div className="lg:w-1/2 space-y-6">
               <div>
-                <h1 className="text-3xl md:text-4xl font-bold mb-4">
+                <h1 className="text-3xl md:text-4xl font-bold mb-4 heading-premium">
                   {settings.loginHeroTitle.split(" ").length > 1 ? (
                     <>
                       {settings.loginHeroTitle.split(" ")[0]}{" "}
@@ -237,16 +237,22 @@ export default function LoginPage() {
                     <span className="gold-text">{settings.loginHeroTitle}</span>
                   )}
                 </h1>
-                <p className="text-muted-foreground max-w-md">{settings.loginHeroSubtitle}</p>
+                <p className="text-muted-foreground max-w-md text-balance">{settings.loginHeroSubtitle}</p>
               </div>
 
-              <div className="relative h-[300px] md:h-[400px] rounded-lg overflow-hidden">
-                <Image src={settings.loginHeroImage} alt="Login" fill className="object-cover" />
+              <div className="relative h-[300px] md:h-[400px] rounded-lg overflow-hidden image-frame">
+                <Image
+                  src={settings.loginHeroImage}
+                  alt="Login"
+                  fill
+                  sizes="(min-width: 1024px) 40vw, 90vw"
+                  className="object-cover"
+                />
               </div>
             </div>
 
             <div className="lg:w-1/2 w-full max-w-md mx-auto lg:max-w-none">
-              <div className="bg-card border rounded-lg p-6 md:p-8">
+              <div className="bg-card border rounded-lg p-6 md:p-8 glass-panel">
                 <Tabs defaultValue="login" className="w-full">
                   <TabsList className="grid w-full grid-cols-2 mb-6">
                     <TabsTrigger value="login">Login</TabsTrigger>
@@ -303,7 +309,7 @@ export default function LoginPage() {
 
                       <Button
                         type="submit"
-                        className="w-full gold-gradient text-black font-semibold"
+                        className="w-full gold-gradient text-black font-semibold sheen-button"
                         disabled={loginLoading}
                       >
                         {loginLoading ? (
@@ -410,7 +416,7 @@ export default function LoginPage() {
 
                       <Button
                         type="submit"
-                        className="w-full gold-gradient text-black font-semibold"
+                        className="w-full gold-gradient text-black font-semibold sheen-button"
                         disabled={registerLoading}
                       >
                         {registerLoading ? (

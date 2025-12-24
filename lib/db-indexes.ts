@@ -25,7 +25,7 @@ export const ensureDbIndexes = () => {
       createIndexSafe("users.phone", () =>
         db.collection("users").createIndex(
           { phone: 1 },
-          { unique: true, partialFilterExpression: { phone: { $exists: true, $ne: "" } } },
+          { unique: true, partialFilterExpression: { phone: { $exists: true, $type: "string", $gt: "" } } },
         ),
       ),
       createIndexSafe("categories.slug", () => db.collection("categories").createIndex({ slug: 1 }, { unique: true })),

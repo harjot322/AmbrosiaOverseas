@@ -51,6 +51,16 @@ export default function ContactPage() {
             ...data.settings,
           }))
         }
+        const activeBanners = (data?.banners || []).filter((banner: { isActive?: boolean }) => banner?.isActive)
+        const contactBanner = activeBanners.find((banner: { position?: string }) => banner?.position === "contact_page")
+        if (contactBanner) {
+          setSettings((prev) => ({
+            ...prev,
+            contactHeroTitle: contactBanner.title || prev.contactHeroTitle,
+            contactHeroSubtitle: contactBanner.subtitle || prev.contactHeroSubtitle,
+            contactHeroImage: contactBanner.imageUrl || prev.contactHeroImage,
+          }))
+        }
       } catch (error) {
         console.error("Error fetching settings:", error)
       }
@@ -114,15 +124,16 @@ export default function ContactPage() {
 
       <div className="pt-16 flex-1">
         {/* Hero Banner */}
-        <div className="relative h-64 md:h-80 bg-black text-white">
+        <div className="relative h-64 md:h-80 bg-black text-white section-divider">
           <Image
             src={settings.contactHeroImage}
             alt="Contact Us"
             fill
+            sizes="100vw"
             className="object-cover opacity-60"
           />
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
-            <h1 className="text-3xl md:text-5xl font-bold mb-4">
+            <h1 className="text-3xl md:text-5xl font-bold mb-4 heading-premium">
               {settings.contactHeroTitle.split(" ").length > 1 ? (
                 <>
                   {settings.contactHeroTitle.split(" ")[0]}{" "}
@@ -132,7 +143,7 @@ export default function ContactPage() {
                 <span className="gold-text">{settings.contactHeroTitle}</span>
               )}
             </h1>
-            <p className="max-w-2xl text-gray-300">{settings.contactHeroSubtitle}</p>
+            <p className="max-w-2xl text-gray-300 text-balance">{settings.contactHeroSubtitle}</p>
           </div>
         </div>
 
@@ -143,10 +154,10 @@ export default function ContactPage() {
               {/* Contact Info */}
               <div className="space-y-8">
                 <div>
-                  <h2 className="text-3xl font-bold mb-6">
+                  <h2 className="text-3xl font-bold mb-6 heading-premium">
                     Get in <span className="gold-text">Touch</span>
                   </h2>
-                  <p className="text-muted-foreground">
+                  <p className="text-muted-foreground text-balance">
                     Have questions about our products or services? We&apos;re here to help. Contact us using any of the
                     methods below or fill out the form and we&apos;ll get back to you as soon as possible.
                   </p>
@@ -206,8 +217,8 @@ export default function ContactPage() {
               </div>
 
               {/* Contact Form */}
-              <div className="bg-card border rounded-lg p-6 md:p-8">
-                <h2 className="text-2xl font-bold mb-6">Send us a Message</h2>
+              <div className="bg-card border rounded-lg p-6 md:p-8 glass-panel">
+                <h2 className="text-2xl font-bold mb-6 heading-premium">Send us a Message</h2>
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
@@ -288,7 +299,7 @@ export default function ContactPage() {
                     />
                   </div>
 
-                  <Button type="submit" className="w-full gold-gradient text-black font-semibold" disabled={loading}>
+                  <Button type="submit" className="w-full gold-gradient text-black font-semibold sheen-button" disabled={loading}>
                     {loading ? (
                       <span className="flex items-center gap-2">
                         <span className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
@@ -308,16 +319,18 @@ export default function ContactPage() {
         </section>
 
         {/* Map Section */}
-        <section className="py-16 bg-black">
+        <section className="py-16 bg-black section-divider">
           <div className="container px-4">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold mb-4 text-white">
+              <h2 className="text-3xl font-bold mb-4 text-white heading-premium">
                 Our <span className="gold-text">Location</span>
               </h2>
-              <p className="text-gray-400 max-w-2xl mx-auto">Visit us at our location in Sadar Bazar, Delhi.</p>
+              <p className="text-gray-400 max-w-2xl mx-auto text-balance">
+                Visit us at our location in Sadar Bazar, Delhi.
+              </p>
             </div>
 
-            <div className="rounded-lg overflow-hidden h-[400px] relative">
+            <div className="rounded-lg overflow-hidden h-[400px] relative image-frame">
               <OpenStreetMap
                 latitude={mapLatitude}
                 longitude={mapLongitude}
