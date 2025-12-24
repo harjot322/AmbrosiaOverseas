@@ -111,8 +111,8 @@ export default function AboutPage() {
             className="object-cover opacity-60"
           />
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
-            <h1 className="text-3xl md:text-5xl font-bold mb-4">{settings.aboutHeroTitle}</h1>
-            <p className="max-w-2xl text-gray-300">{settings.aboutHeroSubtitle}</p>
+            <h1 className="text-3xl md:text-5xl font-bold mb-4 heading-premium">{settings.aboutHeroTitle}</h1>
+            <p className="max-w-2xl text-gray-300 text-balance">{settings.aboutHeroSubtitle}</p>
           </div>
         </div>
 
@@ -125,11 +125,11 @@ export default function AboutPage() {
               </div>
 
               <div className="space-y-6">
-                <h2 className="text-3xl font-bold">
+                <h2 className="text-3xl font-bold heading-premium">
                   Our <span className="gold-text">Story</span>
                 </h2>
                 {settings.aboutStoryParagraphs.map((paragraph: string, index: number) => (
-                  <p key={index} className="text-muted-foreground">
+                  <p key={index} className="text-muted-foreground text-balance">
                     {paragraph}
                   </p>
                 ))}
@@ -141,10 +141,10 @@ export default function AboutPage() {
         {/* Our Mission */}
         <section className="py-16 bg-black text-white">
           <div className="container px-4 text-center">
-            <h2 className="text-3xl font-bold mb-6">
+            <h2 className="text-3xl font-bold mb-6 heading-premium">
               Our <span className="gold-text">Mission</span>
             </h2>
-            <p className="text-xl max-w-3xl mx-auto text-gray-300">&ldquo;{settings.aboutMission}&rdquo;</p>
+            <p className="text-xl max-w-3xl mx-auto text-gray-300 text-balance">&ldquo;{settings.aboutMission}&rdquo;</p>
           </div>
         </section>
 
@@ -152,10 +152,10 @@ export default function AboutPage() {
         <section className="py-16 bg-background">
           <div className="container px-4">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold mb-4">
+              <h2 className="text-3xl font-bold mb-4 heading-premium">
                 Why Choose <span className="gold-text">Ambrosia Overseas</span>
               </h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
+              <p className="text-muted-foreground max-w-2xl mx-auto text-balance">
                 We are committed to bringing you the finest imported food products with unmatched quality and service.
               </p>
             </div>
@@ -168,7 +168,7 @@ export default function AboutPage() {
                 >
                   <div className="mb-4">{feature.icon}</div>
                   <h3 className="text-xl font-semibold mb-3">{feature.title}</h3>
-                  <p className="text-muted-foreground">{feature.description}</p>
+                  <p className="text-muted-foreground text-balance">{feature.description}</p>
                 </div>
               ))}
             </div>
@@ -179,10 +179,10 @@ export default function AboutPage() {
         <section className="py-16 bg-gradient-to-b from-background to-black text-white">
           <div className="container px-4">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold mb-4">
+              <h2 className="text-3xl font-bold mb-4 heading-premium">
                 Our <span className="gold-text">Process</span>
               </h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
+              <p className="text-muted-foreground max-w-2xl mx-auto text-balance">
                 How we bring the finest imported products to our customers.
               </p>
             </div>
@@ -194,7 +194,7 @@ export default function AboutPage() {
                     {step.number}
                   </div>
                   <h3 className="text-xl font-semibold mb-3 mt-4">{step.title}</h3>
-                  <p className="text-muted-foreground">{step.description}</p>
+                  <p className="text-muted-foreground text-balance">{step.description}</p>
                 </div>
               ))}
             </div>
@@ -205,8 +205,8 @@ export default function AboutPage() {
         <section className="py-16 bg-black">
           <div className="container px-4">
             <div className="bg-gradient-to-r from-black via-card to-black p-8 md:p-12 rounded-xl border border-primary/20 text-center">
-              <h2 className="text-3xl font-bold mb-4 text-white">{settings.aboutCtaTitle}</h2>
-              <p className="text-gray-400 max-w-2xl mx-auto mb-8">{settings.aboutCtaSubtitle}</p>
+              <h2 className="text-3xl font-bold mb-4 text-white heading-premium">{settings.aboutCtaTitle}</h2>
+              <p className="text-gray-400 max-w-2xl mx-auto mb-8 text-balance">{settings.aboutCtaSubtitle}</p>
               <Button asChild size="lg" className="gold-gradient text-black font-semibold">
                 <Link href={settings.aboutCtaButtonLink}>{settings.aboutCtaButtonText}</Link>
               </Button>

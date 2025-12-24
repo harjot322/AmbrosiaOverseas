@@ -43,6 +43,7 @@ export default function BannersPage() {
     { value: "home_featured", label: "Home Featured Tiles", size: "800x600 (4:3)" },
     { value: "products_top", label: "Products Page Hero", size: "1920x600 (16:5)" },
     { value: "about_page", label: "About Page Hero", size: "1920x600 (16:5)" },
+    { value: "contact_page", label: "Contact Page Hero", size: "1920x600 (16:5)" },
   ]
 
   const handleBannerImageUpload = (file: File | null | undefined, isEdit = false) => {
@@ -119,7 +120,7 @@ export default function BannersPage() {
         subtitle: "",
         imageUrl: "",
         linkUrl: "",
-        position: "home_hero",
+        position: createPosition,
         isActive: true,
       })
 
@@ -249,7 +250,12 @@ export default function BannersPage() {
                   </label>
                   <Select
                     value={newBanner.position}
-                    onValueChange={(value) => setNewBanner({ ...newBanner, position: value as "home_hero" | "home_featured" | "products_top" | "about_page" })}
+                    onValueChange={(value) =>
+                      setNewBanner({
+                        ...newBanner,
+                        position: value as "home_hero" | "home_featured" | "products_top" | "about_page" | "contact_page",
+                      })
+                    }
                   >
                     <SelectTrigger id="position">
                       <SelectValue placeholder="Select position" />
@@ -259,6 +265,7 @@ export default function BannersPage() {
                       <SelectItem value="home_featured">Home Featured</SelectItem>
                       <SelectItem value="products_top">Products Top</SelectItem>
                       <SelectItem value="about_page">About Page</SelectItem>
+                      <SelectItem value="contact_page">Contact Page</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
@@ -337,15 +344,15 @@ export default function BannersPage() {
               <Button
                 variant="outline"
                 onClick={() =>
-                  setNewBanner({
-                    title: "",
-                    subtitle: "",
-                    imageUrl: "",
-                    linkUrl: "",
-                    position: "home_hero",
-                    isActive: true,
-                  })
-                }
+                      setNewBanner({
+                        title: "",
+                        subtitle: "",
+                        imageUrl: "",
+                        linkUrl: "",
+                        position: createPosition,
+                        isActive: true,
+                      })
+                    }
               >
                 Cancel
               </Button>
@@ -372,6 +379,7 @@ export default function BannersPage() {
                     variant="outline"
                     onClick={() => {
                       setCreatePosition(position.value)
+                      setNewBanner((prev) => ({ ...prev, position: position.value }))
                       setCreateOpen(true)
                     }}
                   >
@@ -484,7 +492,10 @@ export default function BannersPage() {
                   <Select
                     value={editBanner.position}
                     onValueChange={(value) =>
-                      setEditBanner({ ...editBanner, position: value as "home_hero" | "home_featured" | "products_top" | "about_page" })
+                      setEditBanner({
+                        ...editBanner,
+                        position: value as "home_hero" | "home_featured" | "products_top" | "about_page" | "contact_page",
+                      })
                     }
                   >
                     <SelectTrigger id="edit-position">
@@ -495,6 +506,7 @@ export default function BannersPage() {
                       <SelectItem value="home_featured">Home Featured</SelectItem>
                       <SelectItem value="products_top">Products Top</SelectItem>
                       <SelectItem value="about_page">About Page</SelectItem>
+                      <SelectItem value="contact_page">Contact Page</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">

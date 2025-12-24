@@ -146,13 +146,13 @@ export default function AccountSettingsPage() {
           <div className="container px-4">
             <div className="max-w-2xl mx-auto space-y-8">
               <div>
-                <h1 className="text-3xl md:text-4xl font-bold">Account Settings</h1>
-                <p className="text-muted-foreground mt-2">
+                <h1 className="text-3xl md:text-4xl font-bold heading-premium">Account Settings</h1>
+                <p className="text-muted-foreground mt-2 text-balance">
                   Update your profile details and manage your session.
                 </p>
               </div>
 
-              <Card>
+              <Card className="glass-panel reveal-up">
                 <CardHeader>
                   <CardTitle>Profile</CardTitle>
                 </CardHeader>
@@ -194,7 +194,7 @@ export default function AccountSettingsPage() {
                       />
                     </div>
                     <div className="flex flex-wrap gap-3">
-                      <Button type="submit" disabled={saving || loading}>
+                      <Button type="submit" className="sheen-button" disabled={saving || loading}>
                         {saving ? "Saving..." : "Save changes"}
                       </Button>
                       <Button

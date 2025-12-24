@@ -138,11 +138,17 @@ export default function ProductPage() {
             <span className="text-foreground">{product.name}</span>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 animate-fade-in">
             {/* Product Images */}
             <div className="space-y-4">
-              <div className="relative aspect-square overflow-hidden rounded-lg border">
-                <Image src={gallery[0] || "/placeholder.svg"} alt={product.name} fill className="object-cover" />
+              <div className="relative aspect-square overflow-hidden rounded-lg border image-frame">
+                <Image
+                  src={gallery[0] || "/placeholder.svg"}
+                  alt={product.name}
+                  fill
+                  sizes="(min-width: 1024px) 50vw, 100vw"
+                  className="object-cover"
+                />
               </div>
 
               {gallery.length > 1 && (
@@ -150,12 +156,13 @@ export default function ProductPage() {
                   {gallery.slice(0, 4).map((image, index) => (
                     <div
                       key={index}
-                      className="relative aspect-square overflow-hidden rounded-lg border cursor-pointer hover:border-primary"
+                      className="relative aspect-square overflow-hidden rounded-lg border cursor-pointer hover:border-primary image-frame"
                     >
                       <Image
                         src={image || "/placeholder.svg"}
                         alt={`${product.name} - Image ${index + 1}`}
                         fill
+                        sizes="(min-width: 1024px) 12vw, 25vw"
                         className="object-cover"
                       />
                     </div>
@@ -180,7 +187,7 @@ export default function ProductPage() {
                   </div>
                 </div>
 
-                <h1 className="text-3xl font-bold">{product.name}</h1>
+                <h1 className="text-3xl font-bold heading-premium">{product.name}</h1>
 
                 {product.origin && (
                   <div className="flex items-center gap-2 mt-2">
@@ -192,7 +199,7 @@ export default function ProductPage() {
 
               <div className="text-2xl font-bold">{formatPrice(product.price)}</div>
 
-              {product.description && <p className="text-muted-foreground">{product.description}</p>}
+              {product.description && <p className="text-muted-foreground text-balance">{product.description}</p>}
 
               {product.tags && product.tags.length > 0 && (
                 <div className="flex flex-wrap gap-2">
@@ -206,7 +213,7 @@ export default function ProductPage() {
 
               <div className="pt-4">
                 <Button
-                  className="w-full gold-gradient text-black font-semibold"
+                  className="w-full gold-gradient text-black font-semibold sheen-button"
                   onClick={() => {
                     if (!product) return
                     addToCart({
@@ -242,7 +249,7 @@ export default function ProductPage() {
                   </div>
                 </TabsContent>
                 <TabsContent value="nutrition" className="pt-4">
-                  <div className="border rounded-lg overflow-hidden">
+                  <div className="border rounded-lg overflow-hidden glass-panel">
                     <div className="bg-muted px-4 py-2 font-semibold">Nutritional Information</div>
                     <div className="p-4 space-y-2">
                       <div className="grid grid-cols-2 border-b pb-2">
@@ -273,7 +280,7 @@ export default function ProductPage() {
                   </div>
                 </TabsContent>
                 <TabsContent value="ingredients" className="pt-4">
-                  <div className="border rounded-lg overflow-hidden">
+                  <div className="border rounded-lg overflow-hidden glass-panel">
                     <div className="bg-muted px-4 py-2 font-semibold">Ingredients</div>
                     <div className="p-4">
                       <p className="text-muted-foreground">{product.ingredients || "Ingredients not provided."}</p>
@@ -287,7 +294,7 @@ export default function ProductPage() {
           {/* Related Products */}
           {relatedProducts.length > 0 && (
             <div className="mt-16">
-              <h2 className="text-2xl font-bold mb-6">Related Products</h2>
+              <h2 className="text-2xl font-bold mb-6 heading-premium">Related Products</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {relatedProducts.map((relatedProduct) => (
                   <Link href={`/products/${relatedProduct._id}`} key={relatedProduct._id}>
@@ -300,6 +307,7 @@ export default function ProductPage() {
                           src={relatedProduct.image || relatedProduct.images?.[0] || "/placeholder.svg"}
                           alt={relatedProduct.name}
                           fill
+                          sizes="(min-width: 1024px) 22vw, (min-width: 640px) 40vw, 90vw"
                           className="object-cover transition-transform duration-500 group-hover:scale-110"
                         />
                       </div>

@@ -89,10 +89,10 @@ export default function ResetPasswordPage() {
       <div className="pt-16 flex-1">
         <section className="py-16">
           <div className="container px-4">
-            <div className="max-w-md mx-auto bg-card border rounded-lg p-6 md:p-8 space-y-6">
+            <div className="max-w-md mx-auto bg-card border rounded-lg p-6 md:p-8 space-y-6 glass-panel">
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold">Reset Password</h1>
-                <p className="text-muted-foreground mt-2">Choose a new password for your account.</p>
+                <h1 className="text-2xl md:text-3xl font-bold heading-premium">Reset Password</h1>
+                <p className="text-muted-foreground mt-2 text-balance">Choose a new password for your account.</p>
               </div>
               <form className="space-y-4" onSubmit={handleSubmit}>
                 <div className="space-y-2">
@@ -121,7 +121,7 @@ export default function ResetPasswordPage() {
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full gold-gradient text-black font-semibold" disabled={loading}>
+                <Button type="submit" className="w-full gold-gradient text-black font-semibold sheen-button" disabled={loading}>
                   {loading ? "Updating..." : "Update password"}
                 </Button>
               </form>

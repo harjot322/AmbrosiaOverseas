@@ -24,7 +24,7 @@ const mapBanners = (result: Banner[]) =>
 
 export async function GET(request: Request) {
   try {
-    await ensureDbIndexes()
+    void ensureDbIndexes()
     const { searchParams } = new URL(request.url)
     const section = searchParams.get("section") || "home"
     const cacheKey = `/api/bootstrap?section=${section}`
@@ -37,7 +37,7 @@ export async function GET(request: Request) {
       const [settings, banners, featuredProducts, origins] = await Promise.all([
         getSettings(),
         getBanners(),
-        getProducts({ featured: true }, { limit: 4, sort: { featured: -1, createdAt: -1 } }),
+        getProducts({ featured: { $in: [true, "true"] } }, { limit: 4, sort: { featured: -1, createdAt: -1 } }),
         getOrigins(),
       ])
 
@@ -74,12 +74,12 @@ export async function GET(request: Request) {
     }
 
     if (section === "login" || section === "contact") {
-      const settings = await getSettings()
+      const [settings, banners] = await Promise.all([getSettings(), getBanners()])
       const mappedSettings = { ...settings }
       delete mappedSettings._id
       delete mappedSettings.type
 
-      const payload = { settings: mappedSettings }
+      const payload = { settings: mappedSettings, banners: mapBanners(banners) }
       setCached(cacheKey, payload, 60_000)
       return NextResponse.json(payload)
     }

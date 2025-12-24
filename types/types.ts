@@ -6,7 +6,7 @@ export interface Banner {
     subtitle?: string
     imageUrl: string
     linkUrl?: string
-    position: "home_hero" | "home_featured" | "products_top" | "about_page"
+    position: "home_hero" | "home_featured" | "products_top" | "about_page" | "contact_page"
     isActive: boolean
     createdAt?: Date
     updatedAt?: Date
@@ -95,7 +95,7 @@ export interface Tag {
     subtitle?: string
     imageUrl: string
     linkUrl?: string
-    position: "home_hero" | "home_featured" | "products_top" | "about_page"
+    position: "home_hero" | "home_featured" | "products_top" | "about_page" | "contact_page"
     isActive: boolean
     createdAt?: Date
     updatedAt?: Date

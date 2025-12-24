@@ -70,10 +70,10 @@ export default function ForgotPasswordPage() {
       <div className="pt-16 flex-1">
         <section className="py-16">
           <div className="container px-4">
-            <div className="max-w-md mx-auto bg-card border rounded-lg p-6 md:p-8 space-y-6">
+            <div className="max-w-md mx-auto bg-card border rounded-lg p-6 md:p-8 space-y-6 glass-panel">
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold">Forgot Password</h1>
-                <p className="text-muted-foreground mt-2">
+                <h1 className="text-2xl md:text-3xl font-bold heading-premium">Forgot Password</h1>
+                <p className="text-muted-foreground mt-2 text-balance">
                   Enter your email and we&apos;ll send you a password reset link.
                 </p>
               </div>
@@ -91,7 +91,7 @@ export default function ForgotPasswordPage() {
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full gold-gradient text-black font-semibold" disabled={loading}>
+                <Button type="submit" className="w-full gold-gradient text-black font-semibold sheen-button" disabled={loading}>
                   {loading ? "Sending..." : "Send reset link"}
                 </Button>
               </form>

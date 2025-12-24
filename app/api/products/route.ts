@@ -61,10 +61,10 @@ export async function GET(request: Request) {
     }
 
     if (featured === "true") {
-      filters.featured = true
+      filters.featured = { $in: [true, "true"] }
     }
     if (includeInactive !== "true") {
-      filters.active = true
+      filters.active = { $ne: false }
     }
 
     if (excludeId) {

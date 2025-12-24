@@ -1,4 +1,6 @@
 "use client";
+
+export const dynamic = "force-dynamic"
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
@@ -28,6 +30,24 @@ const parseList = (value: string | null) =>
   value ? value.split(",").map((item) => item.trim()).filter(Boolean) : []
 
 export default function ProductsPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen flex flex-col">
+          <Navbar />
+          <div className="pt-16 flex-1">
+            <div className="container py-12 text-center text-muted-foreground">Loading products...</div>
+          </div>
+          <Footer />
+        </main>
+      }
+    >
+      <ProductsPageContent />
+    </Suspense>
+  )
+}
+
+function ProductsPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { toast } = useToast()
@@ -189,22 +209,23 @@ export default function ProductsPage() {
 
       <div className="pt-16 flex-1">
         {/* Hero Banner */}
-        <div className="relative h-64 md:h-80 bg-black text-white">
+        <div className="relative h-64 md:h-80 bg-black text-white section-divider image-frame">
           <Image
             src={heroBanner?.imageUrl || "/placeholder.svg?height=400&width=1920"}
             alt={heroBanner?.title || "Products"}
             fill
+            sizes="100vw"
             className="object-cover opacity-60"
           />
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
-            <h1 className="text-3xl md:text-5xl font-bold mb-4">
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4 reveal-up">
+            <h1 className="text-3xl md:text-5xl font-bold mb-4 heading-premium">
               {heroBanner?.title || (
                 <>
                   Our <span className="gold-text">Premium</span> Products
                 </>
               )}
             </h1>
-            <p className="max-w-2xl text-gray-300">
+            <p className="max-w-2xl text-gray-300 text-balance">
               {heroBanner?.subtitle || "Explore our extensive collection of imported food products from around the world."}
             </p>
           </div>
@@ -222,7 +243,7 @@ export default function ProductsPage() {
                 </Button>
               </div>
 
-              <div className="filter-section border rounded-lg p-4">
+              <div className="filter-section border rounded-lg p-4 glass-panel">
                 <Accordion type="single" collapsible defaultValue="categories">
                   <AccordionItem value="categories" className="border-none">
                     <AccordionTrigger className="py-2 hover:no-underline">
@@ -284,7 +305,7 @@ export default function ProductsPage() {
                 </Accordion>
               </div>
 
-              <div className="filter-section border rounded-lg p-4">
+              <div className="filter-section border rounded-lg p-4 glass-panel">
                 <Accordion type="single" collapsible defaultValue="origin">
                   <AccordionItem value="origin" className="border-none">
                     <AccordionTrigger className="py-2 hover:no-underline">
@@ -317,7 +338,7 @@ export default function ProductsPage() {
                 </Accordion>
               </div>
 
-              <div className="filter-section border rounded-lg p-4">
+              <div className="filter-section border rounded-lg p-4 glass-panel">
                 <Accordion type="single" collapsible defaultValue="price">
                   <AccordionItem value="price" className="border-none">
                     <AccordionTrigger className="py-2 hover:no-underline">
@@ -342,7 +363,7 @@ export default function ProductsPage() {
                 </Accordion>
               </div>
 
-              <div className="filter-section border rounded-lg p-4">
+              <div className="filter-section border rounded-lg p-4 glass-panel">
                 <Accordion type="single" collapsible defaultValue="tags">
                   <AccordionItem value="tags" className="border-none">
                     <AccordionTrigger className="py-2 hover:no-underline">
@@ -399,7 +420,7 @@ export default function ProductsPage() {
 
                 <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
                   <form
-                    className="relative w-full sm:w-[240px]"
+                    className="relative w-full sm:w-[240px] glass-panel rounded-md"
                     onSubmit={(event) => {
                       event.preventDefault()
                       setSearchQuery(searchInput.trim())
@@ -409,7 +430,7 @@ export default function ProductsPage() {
                       value={searchInput}
                       onChange={(event) => setSearchInput(event.target.value)}
                       placeholder="Search products..."
-                      className="pr-9"
+                      className="pr-9 bg-transparent"
                     />
                     <Button
                       type="submit"
@@ -444,12 +465,37 @@ export default function ProductsPage() {
                 </div>
               </div>
 
+              {!loadingProducts && (
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-muted-foreground mb-6">
+                  <span>
+                    Showing {products.length} of {totalProducts} products
+                  </span>
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      className="text-primary hover:underline"
+                      onClick={() => {
+                        setSearchInput("")
+                        setSearchQuery("")
+                      }}
+                    >
+                      Clear search
+                    </button>
+                  )}
+                </div>
+              )}
+
               {/* Products */}
               <Suspense fallback={<ProductsGridSkeleton />}>
                 <ProductsGrid
                   products={products}
                   loading={loadingProducts}
                   viewMode={viewMode}
+                  searchQuery={searchQuery}
+                  onClearSearch={() => {
+                    setSearchInput("")
+                    setSearchQuery("")
+                  }}
                   onAddToCart={(product) => {
                     addToCart({
                       id: product._id,
@@ -518,11 +564,15 @@ function ProductsGrid({
   products,
   loading,
   viewMode,
+  searchQuery,
+  onClearSearch,
   onAddToCart,
 }: {
   products: Product[]
   loading: boolean
   viewMode: "grid" | "list"
+  searchQuery: string
+  onClearSearch: () => void
   onAddToCart: (product: Product) => void
 }) {
   if (loading) {
@@ -530,7 +580,18 @@ function ProductsGrid({
   }
 
   if (products.length === 0) {
-    return <div className="text-center text-muted-foreground">No products found.</div>
+    return (
+      <div className="text-center text-muted-foreground space-y-3">
+        <p className="text-balance">
+          {searchQuery ? `No products match “${searchQuery}”.` : "No products found."}
+        </p>
+        {searchQuery && (
+          <Button variant="outline" size="sm" onClick={onClearSearch}>
+            Clear search
+          </Button>
+        )}
+      </div>
+    )
   }
 
   const gridClass = viewMode === "list" ? "grid grid-cols-1 gap-6" : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
@@ -548,6 +609,7 @@ function ProductsGrid({
                 src={product.image || product.images?.[0] || "/placeholder.svg"}
                 alt={product.name}
                 fill
+                sizes="(min-width: 1024px) 22vw, (min-width: 640px) 40vw, 90vw"
                 className="object-cover transition-transform duration-500 group-hover:scale-110"
               />
             </div>

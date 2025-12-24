@@ -10,27 +10,35 @@ export function AnalyticsTracker() {
 
   useEffect(() => {
     // Record page view when the component mounts or pathname changes
-    const recordPageView = async () => {
+    const recordPageView = () => {
       try {
         const segments = pathname.split("/").filter(Boolean)
         const productId = segments[0] === "products" && segments[1] ? segments[1] : null
 
-        await fetch("/api/analytics", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            page: pathname,
-            productId,
-            userId: session?.user?.id || null,
-            referrer: document.referrer,
-            userAgent: navigator.userAgent,
-            screenWidth: window.innerWidth,
-            screenHeight: window.innerHeight,
-            language: navigator.language,
-          }),
+        const payload = JSON.stringify({
+          page: pathname,
+          productId,
+          userId: session?.user?.id || null,
+          referrer: document.referrer,
+          userAgent: navigator.userAgent,
+          screenWidth: window.innerWidth,
+          screenHeight: window.innerHeight,
+          language: navigator.language,
         })
+
+        if (navigator.sendBeacon) {
+          const blob = new Blob([payload], { type: "application/json" })
+          navigator.sendBeacon("/api/analytics", blob)
+        } else {
+          void fetch("/api/analytics", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: payload,
+            keepalive: true,
+          })
+        }
       } catch (error) {
         console.error("Error recording page view:", error)
       }

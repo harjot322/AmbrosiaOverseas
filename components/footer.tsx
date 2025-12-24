@@ -6,44 +6,79 @@ import { Mail, Phone, MapPin, Facebook, Instagram, Twitter } from "lucide-react"
 
 import { Logo } from "@/components/logo"
 
+type FooterSettings = {
+  contactEmail: string
+  contactPhone: string
+  address: string
+  socialLinks: {
+    facebook: string
+    instagram: string
+    twitter: string
+  }
+}
+
+const defaultSettings: FooterSettings = {
+  contactEmail: "ambrosiaoverseas.an@gmail.com",
+  contactPhone: "+91 8287587442",
+  address: "Ambrosia Overseas, 4420 Gali Bahu Ji, Sadar Bazar Delhi-110006",
+  socialLinks: {
+    facebook: "",
+    instagram: "",
+    twitter: "",
+  },
+}
+
+let settingsCache: FooterSettings | null = null
+let settingsPromise: Promise<FooterSettings | null> | null = null
+
+const getFooterSettings = async (): Promise<FooterSettings | null> => {
+  if (settingsCache) {
+    return settingsCache
+  }
+  if (settingsPromise) {
+    return settingsPromise
+  }
+  settingsPromise = (async () => {
+    try {
+      const response = await fetch("/api/settings")
+      if (!response.ok) return null
+      const data = await response.json()
+      settingsCache = {
+        contactEmail: data?.contactEmail || defaultSettings.contactEmail,
+        contactPhone: data?.contactPhone || defaultSettings.contactPhone,
+        address: data?.address || defaultSettings.address,
+        socialLinks: {
+          facebook: data?.socialLinks?.facebook || "",
+          instagram: data?.socialLinks?.instagram || "",
+          twitter: data?.socialLinks?.twitter || "",
+        },
+      }
+      return settingsCache
+    } catch (error) {
+      console.error("Error fetching settings:", error)
+      return null
+    } finally {
+      settingsPromise = null
+    }
+  })()
+  return settingsPromise
+}
+
 export function Footer() {
-  const [settings, setSettings] = useState({
-    contactEmail: "ambrosiaoverseas.an@gmail.com",
-    contactPhone: "+91 8287587442",
-    address: "Ambrosia Overseas, 4420 Gali Bahu Ji, Sadar Bazar Delhi-110006",
-    socialLinks: {
-      facebook: "",
-      instagram: "",
-      twitter: "",
-    },
-  })
+  const [settings, setSettings] = useState<FooterSettings>(defaultSettings)
 
   useEffect(() => {
-    // Fetch settings from API
+    let mounted = true
     const fetchSettings = async () => {
-      try {
-        const response = await fetch("/api/settings")
-        if (response.ok) {
-          const data = await response.json()
-          if (data) {
-            setSettings((prev) => ({
-              contactEmail: data.contactEmail || prev.contactEmail,
-              contactPhone: data.contactPhone || prev.contactPhone,
-              address: data.address || prev.address,
-              socialLinks: {
-                facebook: data.socialLinks?.facebook || "",
-                instagram: data.socialLinks?.instagram || "",
-                twitter: data.socialLinks?.twitter || "",
-              },
-            }))
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching settings:", error)
+      const data = await getFooterSettings()
+      if (data && mounted) {
+        setSettings(data)
       }
     }
-
     fetchSettings()
+    return () => {
+      mounted = false
+    }
   }, [])
 
   return (
