@@ -2,7 +2,7 @@
 import type React from "react"
 
 import { useState, useEffect, useCallback } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useParams } from "next/navigation"
 import { ArrowLeft, Upload, Plus, X, Save } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -16,6 +16,13 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import type { Category, Product, Tag } from "@/types/types"
+
+const slugify = (value: string) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
 
 interface FormData {
   name: string
@@ -40,8 +47,10 @@ interface FormData {
   longDescription?: string
 }
 
-export default function EditProduct({ params }: { params: { id: string } }) {
+export default function EditProduct() {
   const router = useRouter()
+  const params = useParams()
+  const productId = typeof params?.id === "string" ? params.id : ""
   const { toast } = useToast()
 
   const [formData, setFormData] = useState<FormData>({
@@ -73,9 +82,14 @@ export default function EditProduct({ params }: { params: { id: string } }) {
   const [loading, setLoading] = useState(false)
   const [loadingProduct, setLoadingProduct] = useState(true)
   const [originSelect, setOriginSelect] = useState("")
+  const [originSaving, setOriginSaving] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
   const [originOptions, setOriginOptions] = useState<string[]>([])
   const [tags, setTags] = useState<Tag[]>([])
+  const [newCategoryName, setNewCategoryName] = useState("")
+  const [newCategorySlug, setNewCategorySlug] = useState("")
+  const [newSubcategoryName, setNewSubcategoryName] = useState("")
+  const [newSubcategorySlug, setNewSubcategorySlug] = useState("")
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -89,9 +103,10 @@ export default function EditProduct({ params }: { params: { id: string } }) {
 
   const fetchOrigins = useCallback(async () => {
     try {
-      const response = await fetch("/api/products?distinct=origin")
+      const response = await fetch("/api/origins")
       const data = await response.json()
-      setOriginOptions(data.filter(Boolean))
+      const originNames = (data || []).map((origin: { name?: string }) => origin?.name).filter(Boolean)
+      setOriginOptions(originNames)
     } catch (error) {
       console.error("Error fetching origins:", error)
     }
@@ -110,7 +125,10 @@ export default function EditProduct({ params }: { params: { id: string } }) {
   const fetchProduct = useCallback(async () => {
     try {
       setLoadingProduct(true)
-      const response = await fetch(`/api/products/${params.id}`)
+      if (!productId) {
+        throw new Error("Missing product id")
+      }
+      const response = await fetch(`/api/products/${productId}`)
       if (!response.ok) {
         throw new Error("Product not found")
       }
@@ -150,7 +168,7 @@ export default function EditProduct({ params }: { params: { id: string } }) {
     } finally {
       setLoadingProduct(false)
     }
-  }, [params.id, toast])
+  }, [productId, toast])
 
   useEffect(() => {
     fetchCategories()
@@ -219,6 +237,17 @@ export default function EditProduct({ params }: { params: { id: string } }) {
     setImageUrlInput("")
   }
 
+  const handleImageFiles = (files: FileList | null) => {
+    if (!files || files.length === 0) return
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        setImages((prev) => [...prev, reader.result as string])
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+
   const removeImage = (index: number) => {
     setImages((prev) => prev.filter((_, i) => i !== index))
   }
@@ -236,7 +265,10 @@ export default function EditProduct({ params }: { params: { id: string } }) {
         image: images[0] || "",
       }
 
-      const response = await fetch(`/api/products/${params.id}`, {
+      if (!productId) {
+        throw new Error("Missing product id")
+      }
+      const response = await fetch(`/api/products/${productId}?includeInactive=true`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -265,8 +297,131 @@ export default function EditProduct({ params }: { params: { id: string } }) {
     }
   }
 
+  const handleCreateOrigin = async () => {
+    const originName = formData.origin.trim()
+    if (!originName) {
+      toast({
+        title: "Origin required",
+        description: "Please enter a country of origin.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const existing = originOptions.find(
+      (origin) => origin.toLowerCase() === originName.toLowerCase(),
+    )
+    if (existing) {
+      setOriginSelect(existing)
+      handleSelectChange("origin", existing)
+      toast({
+        title: "Already exists",
+        description: "That country already exists in origins.",
+      })
+      return
+    }
+
+    setOriginSaving(true)
+    try {
+      const response = await fetch("/api/origins", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: originName, slug: slugify(originName) }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to add origin")
+      }
+
+      setOriginOptions((prev) => [...prev, originName])
+      setOriginSelect(originName)
+      handleSelectChange("origin", originName)
+      toast({
+        title: "Origin added",
+        description: "The country has been added to origins.",
+      })
+    } catch (error) {
+      console.error("Error adding origin:", error)
+      toast({
+        title: "Error",
+        description: "Failed to add origin.",
+        variant: "destructive",
+      })
+    } finally {
+      setOriginSaving(false)
+    }
+  }
+
   if (loadingProduct) {
     return <div className="p-6 text-muted-foreground">Loading product...</div>
+  }
+
+  const slugify = (value: string) =>
+    value
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+
+  const handleCreateCategory = async () => {
+    const name = newCategoryName.trim()
+    const slug = newCategorySlug.trim() || slugify(name)
+    if (!name || !slug) return
+
+    try {
+      const response = await fetch("/api/categories", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name, slug, subcategories: [] }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to create category")
+      }
+
+      setNewCategoryName("")
+      setNewCategorySlug("")
+      handleSelectChange("category", slug)
+      await fetchCategories()
+      toast({ title: "Category created", description: `"${name}" is now available.` })
+    } catch (error) {
+      console.error("Error creating category:", error)
+      toast({ title: "Error", description: "Failed to create category.", variant: "destructive" })
+    }
+  }
+
+  const handleCreateSubcategory = async () => {
+    const name = newSubcategoryName.trim()
+    const slug = newSubcategorySlug.trim() || slugify(name)
+    if (!name || !slug || !selectedCategory?._id) return
+
+    try {
+      const updatedSubcategories = [...(selectedCategory.subcategories || []), { id: Date.now(), parentId: selectedCategory._id, name, slug }]
+      const response = await fetch(`/api/categories/${selectedCategory._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ subcategories: updatedSubcategories }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to create subcategory")
+      }
+
+      setNewSubcategoryName("")
+      setNewSubcategorySlug("")
+      handleSelectChange("subcategory", slug)
+      await fetchCategories()
+      toast({ title: "Subcategory created", description: `"${name}" added to ${selectedCategory.name}.` })
+    } catch (error) {
+      console.error("Error creating subcategory:", error)
+      toast({ title: "Error", description: "Failed to create subcategory.", variant: "destructive" })
+    }
   }
 
   const selectedCategory = categories.find((category) => category.slug === formData.category)
@@ -326,6 +481,21 @@ export default function EditProduct({ params }: { params: { id: string } }) {
                     )}
                   </SelectContent>
                 </Select>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <Input
+                    placeholder="New category name"
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                  />
+                  <Input
+                    placeholder="New category slug"
+                    value={newCategorySlug}
+                    onChange={(e) => setNewCategorySlug(e.target.value)}
+                  />
+                </div>
+                <Button type="button" variant="secondary" onClick={handleCreateCategory}>
+                  Create Category
+                </Button>
               </div>
 
               <div className="space-y-2">
@@ -346,6 +516,23 @@ export default function EditProduct({ params }: { params: { id: string } }) {
                     ))}
                   </SelectContent>
                 </Select>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <Input
+                    placeholder="New subcategory name"
+                    value={newSubcategoryName}
+                    onChange={(e) => setNewSubcategoryName(e.target.value)}
+                    disabled={!selectedCategory?._id}
+                  />
+                  <Input
+                    placeholder="New subcategory slug"
+                    value={newSubcategorySlug}
+                    onChange={(e) => setNewSubcategorySlug(e.target.value)}
+                    disabled={!selectedCategory?._id}
+                  />
+                </div>
+                <Button type="button" variant="secondary" onClick={handleCreateSubcategory} disabled={!selectedCategory?._id}>
+                  Create Subcategory
+                </Button>
               </div>
 
               <div className="space-y-2">
@@ -413,11 +600,22 @@ export default function EditProduct({ params }: { params: { id: string } }) {
                   </SelectContent>
                 </Select>
                 {originSelect === "other" && (
-                  <Input
-                    value={formData.origin}
-                    onChange={(e) => handleSelectChange("origin", e.target.value)}
-                    placeholder="Enter country of origin"
-                  />
+                  <div className="space-y-2">
+                    <Input
+                      value={formData.origin}
+                      onChange={(e) => handleSelectChange("origin", e.target.value)}
+                      placeholder="Enter country of origin"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCreateOrigin}
+                      disabled={originSaving}
+                    >
+                      {originSaving ? "Adding..." : "Add to origins"}
+                    </Button>
+                  </div>
                 )}
               </div>
 
@@ -498,6 +696,18 @@ export default function EditProduct({ params }: { params: { id: string } }) {
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">Add one image URL at a time.</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="image-upload">Upload Images</Label>
+                <Input
+                  id="image-upload"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => handleImageFiles(e.target.files)}
+                />
+                <p className="text-xs text-muted-foreground">Uploaded images are saved as data URLs.</p>
               </div>
 
               {images.length === 0 ? (

@@ -8,6 +8,7 @@ const COLLECTIONS = {
   PRODUCTS: "products",
   CATEGORIES: "categories",
   TAGS: "tags",
+  ORIGINS: "origins",
   USERS: "users",
   CONTACT: "contact",
   BANNERS: "banners",
@@ -200,6 +201,50 @@ export async function deleteTag(id: string) {
   }
 }
 
+// Origins
+export async function getOrigins() {
+  const db = await getDb()
+  return db.collection(COLLECTIONS.ORIGINS).find().toArray()
+}
+
+export async function createOrigin(originData: any) {
+  const db = await getDb()
+  const result = await db.collection(COLLECTIONS.ORIGINS).insertOne({
+    ...originData,
+    createdAt: new Date(),
+  })
+  return result
+}
+
+export async function updateOrigin(id: string, originData: any) {
+  const db = await getDb()
+  try {
+    const result = await db.collection(COLLECTIONS.ORIGINS).updateOne(
+      { _id: new ObjectId(id) },
+      {
+        $set: {
+          ...originData,
+          updatedAt: new Date(),
+        },
+      },
+    )
+    return result
+  } catch (error) {
+    console.error("Error in updateOrigin:", error)
+    throw error
+  }
+}
+
+export async function deleteOrigin(id: string) {
+  const db = await getDb()
+  try {
+    return db.collection(COLLECTIONS.ORIGINS).deleteOne({ _id: new ObjectId(id) })
+  } catch (error) {
+    console.error("Error in deleteOrigin:", error)
+    throw error
+  }
+}
+
 // Users
 export async function getUsers() {
   const db = await getDb()
@@ -219,6 +264,11 @@ export async function getUserById(id: string) {
 export async function getUserByEmail(email: string) {
   const db = await getDb()
   return db.collection(COLLECTIONS.USERS).findOne({ email })
+}
+
+export async function getUserByPhone(phone: string) {
+  const db = await getDb()
+  return db.collection(COLLECTIONS.USERS).findOne({ phone })
 }
 
 export async function createUser(userData: any) {
@@ -470,13 +520,16 @@ export async function getAnalytics(period: string) {
     ])
     .toArray()
 
-  // Get product views (only for product pages)
+  // Get product views (last 24h for product interest)
+  const last24Hours = new Date(now)
+  last24Hours.setHours(now.getHours() - 24)
+
   const productViews = await db
     .collection(COLLECTIONS.ANALYTICS)
     .aggregate([
       {
         $match: {
-          ...dateFilter,
+          timestamp: { $gte: last24Hours },
           productId: { $ne: null },
         },
       },
@@ -494,11 +547,17 @@ export async function getAnalytics(period: string) {
   // Get product details for the top viewed products
   const productIds = productViews
     .map((item) => {
-      try {
-        return new ObjectId(item._id)
-      } catch (error) {
-        return null
+      if (item._id instanceof ObjectId) {
+        return item._id
       }
+      if (typeof item._id === "string") {
+        try {
+          return new ObjectId(item._id)
+        } catch (error) {
+          return null
+        }
+      }
+      return null
     })
     .filter((id) => id !== null)
 
@@ -517,9 +576,10 @@ export async function getAnalytics(period: string) {
 
     // Map product details with view counts
     topProducts = productViews.map((view) => {
-      const product = products.find((p) => p._id.toString() === view._id)
+      const viewId = view._id instanceof ObjectId ? view._id.toString() : String(view._id)
+      const product = products.find((p) => p._id.toString() === viewId)
       return {
-        _id: view._id,
+        _id: viewId,
         name: product ? product.name : "Unknown Product",
         views: view.count,
         price: product ? product.price : 0,
@@ -533,6 +593,63 @@ export async function getAnalytics(period: string) {
     pageViewsByPage,
     topProducts,
   }
+}
+
+export async function getProductViewUsers(productId: string, sinceHours = 24) {
+  const db = await getDb()
+  const sinceDate = new Date()
+  sinceDate.setHours(sinceDate.getHours() - sinceHours)
+
+  const results = await db
+    .collection(COLLECTIONS.ANALYTICS)
+    .aggregate([
+      {
+        $match: {
+          productId,
+          userId: { $ne: null },
+          timestamp: { $gte: sinceDate },
+        },
+      },
+      {
+        $group: {
+          _id: "$userId",
+          views: { $sum: 1 },
+          lastViewed: { $max: "$timestamp" },
+        },
+      },
+      { $sort: { views: -1 } },
+    ])
+    .toArray()
+
+  const userIds = results
+    .map((item) => {
+      try {
+        return new ObjectId(String(item._id))
+      } catch (error) {
+        return null
+      }
+    })
+    .filter((id) => id !== null)
+
+  const users = userIds.length
+    ? await db
+        .collection(COLLECTIONS.USERS)
+        .find({ _id: { $in: userIds } })
+        .toArray()
+    : []
+
+  const usersById = new Map(users.map((user) => [user._id.toString(), user]))
+
+  return results.map((entry) => {
+    const user = usersById.get(String(entry._id))
+    return {
+      userId: String(entry._id),
+      name: user?.name || "Unknown",
+      email: user?.email || "Unknown",
+      views: entry.views,
+      lastViewed: entry.lastViewed,
+    }
+  })
 }
 
 // Get real-time stats

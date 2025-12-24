@@ -27,7 +27,7 @@ export default function AdminProducts() {
   const fetchProducts = useCallback(async () => {
     try {
       setLoading(true)
-      const response = await fetch("/api/products")
+      const response = await fetch("/api/products?includeInactive=true")
       const data = await response.json()
       setProducts(data)
     } catch (error) {

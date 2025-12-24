@@ -1,10 +1,19 @@
 import { NextResponse } from "next/server"
-import { getUserById, updateUser, deleteUser } from "@/lib/db-service"
+import { getUserById, updateUser, deleteUser, getUserByPhone } from "@/lib/db-service"
 import { hash } from "bcryptjs"
+import { getSession, isAdmin, isSameUser } from "@/lib/auth"
+import { isSameOrigin } from "@/lib/csrf"
+import { logAdminAction } from "@/lib/audit"
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const user = await getUserById(params.id)
+    const { id } = await params
+    const session = await getSession()
+    if (!session || (!isAdmin(session) && !isSameUser(session, id))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const user = await getUserById(id)
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
@@ -13,23 +22,61 @@ export async function GET(request: Request, { params }: { params: { id: string }
     // Remove password from response
     const { password, ...userWithoutPassword } = user
 
-    return NextResponse.json(userWithoutPassword)
+    return NextResponse.json({ ...userWithoutPassword, _id: user._id.toString() })
   } catch (error) {
     console.error("Error fetching user:", error)
     return NextResponse.json({ error: "Failed to fetch user" }, { status: 500 })
   }
 }
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const session = await getSession()
     const body = await request.json()
+    const { id } = await params
 
-    // If password is being updated, hash it
-    if (body.password) {
-      body.password = await hash(body.password, 10)
+    if (!session || (!isAdmin(session) && !isSameUser(session, id))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    if (!isSameOrigin(request)) {
+      return NextResponse.json({ error: "Invalid CSRF origin" }, { status: 403 })
     }
 
-    const result = await updateUser(params.id, body)
+    const updateData: Record<string, unknown> = {}
+    if (typeof body.name === "string") updateData.name = body.name
+    if (typeof body.phone === "string") updateData.phone = body.phone
+    if (body.password) {
+      updateData.password = await hash(body.password, 10)
+    }
+    if (isAdmin(session) && typeof body.role === "string") {
+      updateData.role = body.role
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ error: "No valid fields provided" }, { status: 400 })
+    }
+
+    if (updateData.phone) {
+      const digitsOnly = String(updateData.phone).replace(/\D/g, "")
+      if (digitsOnly.length < 10 || digitsOnly.length > 15) {
+        return NextResponse.json({ error: "Phone number must be 10-15 digits" }, { status: 400 })
+      }
+      const existingPhone = await getUserByPhone(String(updateData.phone))
+      if (existingPhone && existingPhone._id.toString() !== id) {
+        return NextResponse.json({ error: "User with this phone already exists" }, { status: 409 })
+      }
+    }
+
+    const result = await updateUser(id, updateData)
+    if (isAdmin(session)) {
+      await logAdminAction({
+        session,
+        request,
+        action: "update",
+        resource: "user",
+        resourceId: id,
+      })
+    }
 
     if (result.matchedCount === 0) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
@@ -45,9 +92,26 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const result = await deleteUser(params.id)
+    const session = await getSession()
+    const { id } = await params
+    if (!session || (!isAdmin(session) && !isSameUser(session, id))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    if (!isSameOrigin(request)) {
+      return NextResponse.json({ error: "Invalid CSRF origin" }, { status: 403 })
+    }
+    const result = await deleteUser(id)
+    if (isAdmin(session)) {
+      await logAdminAction({
+        session,
+        request,
+        action: "delete",
+        resource: "user",
+        resourceId: id,
+      })
+    }
 
     if (result.deletedCount === 0) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
@@ -62,4 +126,3 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     return NextResponse.json({ error: "Failed to delete user" }, { status: 500 })
   }
 }
-

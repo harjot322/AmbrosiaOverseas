@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { Plus, Edit, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,25 +15,40 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
+import type { Tag } from "@/types/types"
 
-// Sample tag data
-const initialTags = [
-  { id: 1, name: "Best Seller", slug: "best-seller" },
-  { id: 2, name: "New Arrival", slug: "new-arrival" },
-  { id: 3, name: "Limited Edition", slug: "limited-edition" },
-  { id: 4, name: "Exclusive", slug: "exclusive" },
-  { id: 5, name: "Only on Ambrosia", slug: "only-on-ambrosia" },
-  { id: 6, name: "Imported from USA", slug: "imported-from-usa" },
-  { id: 7, name: "Imported from Dubai", slug: "imported-from-dubai" },
-  { id: 8, name: "Premium Quality", slug: "premium-quality" },
-]
+const slugify = (value: string) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
 
 export default function TagsPage() {
   const { toast } = useToast()
-  const [tags, setTags] = useState(initialTags)
+  const [tags, setTags] = useState<Tag[]>([])
   const [newTag, setNewTag] = useState({ name: "", slug: "" })
-  const [editTag, setEditTag] = useState<{ id: number; name: string; slug: string } | null>(null)
+  const [editTag, setEditTag] = useState<Tag | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
+
+  const fetchTags = useCallback(async () => {
+    try {
+      const response = await fetch("/api/tags")
+      const data = await response.json()
+      setTags(data)
+    } catch (error) {
+      console.error("Error fetching tags:", error)
+      toast({
+        title: "Error",
+        description: "Failed to fetch tags",
+        variant: "destructive",
+      })
+    }
+  }, [toast])
+
+  useEffect(() => {
+    fetchTags()
+  }, [fetchTags])
 
   const filteredTags = tags.filter(
     (tag) =>
@@ -41,56 +56,98 @@ export default function TagsPage() {
       tag.slug.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
-  const handleAddTag = () => {
-    if (!newTag.name || !newTag.slug) {
+  const handleAddTag = async () => {
+    if (!newTag.name) {
       toast({
         title: "Error",
-        description: "Name and slug are required.",
+        description: "Name is required.",
         variant: "destructive",
       })
       return
     }
 
-    const newId = Math.max(...tags.map((t) => t.id)) + 1
-    setTags((prev) => [
-      ...prev,
-      {
-        id: newId,
-        name: newTag.name,
-        slug: newTag.slug,
-      },
-    ])
+    const slug = newTag.slug.trim() || slugify(newTag.name)
 
-    setNewTag({ name: "", slug: "" })
+    try {
+      const response = await fetch("/api/tags", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: newTag.name, slug }),
+      })
 
-    toast({
-      title: "Tag Added",
-      description: "The tag has been added successfully.",
-    })
+      if (!response.ok) {
+        throw new Error("Failed to create tag")
+      }
+
+      setNewTag({ name: "", slug: "" })
+      await fetchTags()
+      toast({
+        title: "Tag Added",
+        description: "The tag has been added successfully.",
+      })
+    } catch (error) {
+      console.error("Error creating tag:", error)
+      toast({
+        title: "Error",
+        description: "Failed to create tag",
+        variant: "destructive",
+      })
+    }
   }
 
-  const handleUpdateTag = () => {
+  const handleUpdateTag = async () => {
     if (!editTag) return
 
-    setTags((prev) =>
-      prev.map((tag) => (tag.id === editTag.id ? { ...tag, name: editTag.name, slug: editTag.slug } : tag)),
-    )
+    try {
+      const response = await fetch(`/api/tags/${editTag._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: editTag.name, slug: editTag.slug }),
+      })
 
-    setEditTag(null)
+      if (!response.ok) {
+        throw new Error("Failed to update tag")
+      }
 
-    toast({
-      title: "Tag Updated",
-      description: "The tag has been updated successfully.",
-    })
+      setEditTag(null)
+      await fetchTags()
+      toast({
+        title: "Tag Updated",
+        description: "The tag has been updated successfully.",
+      })
+    } catch (error) {
+      console.error("Error updating tag:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update tag",
+        variant: "destructive",
+      })
+    }
   }
 
-  const handleDeleteTag = (tagId: number) => {
-    setTags((prev) => prev.filter((tag) => tag.id !== tagId))
-
-    toast({
-      title: "Tag Deleted",
-      description: "The tag has been deleted successfully.",
-    })
+  const handleDeleteTag = async (tagId: string) => {
+    try {
+      const response = await fetch(`/api/tags/${tagId}`, { method: "DELETE" })
+      if (!response.ok) {
+        throw new Error("Failed to delete tag")
+      }
+      setTags((prev) => prev.filter((tag) => tag._id !== tagId))
+      toast({
+        title: "Tag Deleted",
+        description: "The tag has been deleted successfully.",
+      })
+    } catch (error) {
+      console.error("Error deleting tag:", error)
+      toast({
+        title: "Error",
+        description: "Failed to delete tag",
+        variant: "destructive",
+      })
+    }
   }
 
   return (
@@ -155,7 +212,7 @@ export default function TagsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredTags.map((tag) => (
-          <div key={tag.id} className="flex items-center justify-between p-4 border rounded-lg">
+          <div key={tag._id} className="flex items-center justify-between p-4 border rounded-lg">
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="px-2 py-1">
                 {tag.name}
@@ -165,7 +222,7 @@ export default function TagsPage() {
             <div className="flex items-center gap-2">
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditTag(tag)}>
                     <Edit className="h-4 w-4" />
                   </Button>
                 </DialogTrigger>
@@ -181,10 +238,9 @@ export default function TagsPage() {
                       </label>
                       <Input
                         id="edit-name"
-                        value={editTag?.name || tag.name}
-                        onChange={(e) => setEditTag({ ...editTag!, name: e.target.value })}
+                        value={editTag?.name || ""}
+                        onChange={(e) => setEditTag((prev) => (prev ? { ...prev, name: e.target.value } : prev))}
                         placeholder="Tag name"
-                        onFocus={() => setEditTag({ id: tag.id, name: tag.name, slug: tag.slug })}
                       />
                     </div>
                     <div className="space-y-2">
@@ -193,10 +249,9 @@ export default function TagsPage() {
                       </label>
                       <Input
                         id="edit-slug"
-                        value={editTag?.slug || tag.slug}
-                        onChange={(e) => setEditTag({ ...editTag!, slug: e.target.value })}
+                        value={editTag?.slug || ""}
+                        onChange={(e) => setEditTag((prev) => (prev ? { ...prev, slug: e.target.value } : prev))}
                         placeholder="tag-slug"
-                        onFocus={() => setEditTag({ id: tag.id, name: tag.name, slug: tag.slug })}
                       />
                     </div>
                   </div>
@@ -212,15 +267,17 @@ export default function TagsPage() {
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 text-destructive"
-                onClick={() => handleDeleteTag(tag.id)}
+                onClick={() => handleDeleteTag(tag._id)}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
           </div>
         ))}
+        {filteredTags.length === 0 && (
+          <div className="text-sm text-muted-foreground">No tags found.</div>
+        )}
       </div>
     </div>
   )
 }
-

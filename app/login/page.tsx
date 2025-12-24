@@ -2,12 +2,13 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Eye, EyeOff, LogIn, UserPlus } from "lucide-react"
 import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
@@ -19,9 +20,16 @@ import { useToast } from "@/hooks/use-toast"
 export default function LoginPage() {
   const router = useRouter()
   const { toast } = useToast()
+  const { status } = useSession()
   const [showPassword, setShowPassword] = useState(false)
   const [loginLoading, setLoginLoading] = useState(false)
   const [registerLoading, setRegisterLoading] = useState(false)
+  const [settings, setSettings] = useState({
+    loginHeroTitle: "Welcome to Ambrosia Overseas",
+    loginHeroSubtitle:
+      "Sign in to your account or create a new one to explore our premium imported food products.",
+    loginHeroImage: "/placeholder.svg?height=800&width=800",
+  })
 
   const [loginData, setLoginData] = useState({
     email: "",
@@ -36,6 +44,32 @@ export default function LoginPage() {
     confirmPassword: "",
   })
 
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await fetch("/api/bootstrap?section=login")
+        if (!response.ok) return
+        const data = await response.json()
+        if (data?.settings) {
+          setSettings((prev) => ({ ...prev, ...data.settings }))
+        }
+      } catch (error) {
+        console.error("Error fetching settings:", error)
+      }
+    }
+
+    fetchSettings()
+  }, [])
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.replace("/")
+    }
+  }, [router, status])
+
+  const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+  const isValidPassword = (value: string) => value.length >= 8 && value.length <= 64
+
   const handleLoginChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setLoginData((prev) => ({ ...prev, [name]: value }))
@@ -47,53 +81,88 @@ export default function LoginPage() {
   }
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoginLoading(true);
+    e.preventDefault()
+    const normalizedEmail = loginData.email.trim().toLowerCase()
+    if (!isValidEmail(normalizedEmail)) {
+      toast({
+        title: "Invalid email",
+        description: "Please enter a valid email address.",
+        variant: "destructive",
+      })
+      return
+    }
+    if (!isValidPassword(loginData.password)) {
+      toast({
+        title: "Invalid password",
+        description: "Password must be 8-64 characters long.",
+        variant: "destructive",
+      })
+      return
+    }
 
-  try {
-    const result = await signIn("credentials", {
-      redirect: false,
-      email: loginData.email,
-      password: loginData.password,
-    });
+    setLoginLoading(true)
 
-    if (result?.error) {
+    try {
+      const result = await signIn("credentials", {
+        redirect: false,
+        email: normalizedEmail,
+        password: loginData.password,
+      })
+
+      if (result?.error) {
+        toast({
+          title: "Login Failed",
+          description: "Invalid email or password.",
+          variant: "destructive",
+        })
+      } else {
+        // Fetch the user session to get the role
+        const session = await fetch("/api/auth/session").then((res) => res.json())
+
+        if (session?.user?.role === "admin") {
+          toast({
+            title: "Welcome Admin",
+            description: "Redirecting to admin dashboard...",
+          })
+          router.push("/admin")
+        } else {
+          toast({
+            title: "Login Successful",
+            description: "Welcome back to Ambrosia Overseas!",
+          })
+          router.push("/")
+        }
+      }
+    } catch (error) {
       toast({
         title: "Login Failed",
-        description: "Invalid email or password.",
+        description: "An error occurred during login.",
         variant: "destructive",
-      });
-    } else {
-      // Fetch the user session to get the role
-      const session = await fetch("/api/auth/session").then((res) => res.json());
-
-      if (session?.user?.role === "admin") {
-        toast({
-          title: "Welcome Admin",
-          description: "Redirecting to admin dashboard...",
-        });
-        router.push("/admin");
-      } else {
-        toast({
-          title: "Login Successful",
-          description: "Welcome back to Ambrosia Overseas!",
-        });
-        router.push("/");
-      }
+      })
+    } finally {
+      setLoginLoading(false)
     }
-  } catch (error) {
-    toast({
-      title: "Login Failed",
-      description: "An error occurred during login.",
-      variant: "destructive",
-    });
-  } finally {
-    setLoginLoading(false);
   }
-};
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    const normalizedEmail = registerData.email.trim().toLowerCase()
+    if (!isValidEmail(normalizedEmail)) {
+      toast({
+        title: "Invalid email",
+        description: "Please enter a valid email address.",
+        variant: "destructive",
+      })
+      return
+    }
+    if (!isValidPassword(registerData.password)) {
+      toast({
+        title: "Invalid password",
+        description: "Password must be 8-64 characters long.",
+        variant: "destructive",
+      })
+      return
+    }
     if (registerData.password !== registerData.confirmPassword) {
       toast({
         title: "Passwords do not match",
@@ -113,7 +182,7 @@ export default function LoginPage() {
         },
         body: JSON.stringify({
           name: registerData.name,
-          email: registerData.email,
+          email: normalizedEmail,
           phone: registerData.phone,
           password: registerData.password,
         }),
@@ -133,7 +202,7 @@ export default function LoginPage() {
       // Auto login after registration
       await signIn("credentials", {
         redirect: false,
-        email: registerData.email,
+        email: normalizedEmail,
         password: registerData.password,
       })
 
@@ -159,15 +228,20 @@ export default function LoginPage() {
             <div className="lg:w-1/2 space-y-6">
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold mb-4">
-                  Welcome to <span className="gold-text">Ambrosia Overseas</span>
+                  {settings.loginHeroTitle.split(" ").length > 1 ? (
+                    <>
+                      {settings.loginHeroTitle.split(" ")[0]}{" "}
+                      <span className="gold-text">{settings.loginHeroTitle.split(" ").slice(1).join(" ")}</span>
+                    </>
+                  ) : (
+                    <span className="gold-text">{settings.loginHeroTitle}</span>
+                  )}
                 </h1>
-                <p className="text-muted-foreground max-w-md">
-                  Sign in to your account or create a new one to explore our premium imported food products.
-                </p>
+                <p className="text-muted-foreground max-w-md">{settings.loginHeroSubtitle}</p>
               </div>
 
               <div className="relative h-[300px] md:h-[400px] rounded-lg overflow-hidden">
-                <Image src="/placeholder.svg?height=800&width=800" alt="Login" fill className="object-cover" />
+                <Image src={settings.loginHeroImage} alt="Login" fill className="object-cover" />
               </div>
             </div>
 
@@ -183,7 +257,7 @@ export default function LoginPage() {
                     <form onSubmit={handleLoginSubmit} className="space-y-6">
                       <div className="space-y-2">
                         <label htmlFor="login-email" className="text-sm font-medium">
-                          Email or Username
+                          Email
                         </label>
                         <Input
                           id="login-email"
@@ -200,7 +274,7 @@ export default function LoginPage() {
                           <label htmlFor="login-password" className="text-sm font-medium">
                             Password
                           </label>
-                          <Link href="#" className="text-xs text-primary hover:underline">
+                          <Link href="/forgot-password" className="text-xs text-primary hover:underline">
                             Forgot password?
                           </Link>
                         </div>
@@ -364,4 +438,3 @@ export default function LoginPage() {
     </main>
   )
 }
-

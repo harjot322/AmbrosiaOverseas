@@ -17,6 +17,8 @@ export const authOptions: NextAuthOptions = {
           console.error("Missing email or password.")
           return null
         }
+
+        const normalizedEmail = credentials.email.trim().toLowerCase()
       
         try {
           console.log("Connecting to MongoDB...");
@@ -27,8 +29,8 @@ export const authOptions: NextAuthOptions = {
           const usersCollection = db.collection("users")
           console.log("Using collection:", usersCollection.collectionName);
       
-          console.log("Searching for user with email:", credentials.email);
-          const user = await usersCollection.findOne({ email: credentials.email })
+          console.log("Searching for user with email:", normalizedEmail);
+          const user = await usersCollection.findOne({ email: normalizedEmail })
       
           if (!user) {
             console.error("User not found.")

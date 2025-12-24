@@ -2,7 +2,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { ChevronDown, Grid3X3, LayoutList } from "lucide-react"
+import { ChevronDown, Grid3X3, LayoutList, Search, ShoppingCart } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 
 import { Navbar } from "@/components/navbar"
@@ -15,6 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useToast } from "@/hooks/use-toast"
+import { addToCart } from "@/lib/cart"
 import type { Banner, Category, Product, Tag } from "@/types/types"
 
 const formatPrice = (value?: number) => {
@@ -28,6 +30,7 @@ const parseList = (value: string | null) =>
 export default function ProductsPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
+  const { toast } = useToast()
 
   const [categories, setCategories] = useState<Category[]>([])
   const [tags, setTags] = useState<Tag[]>([])
@@ -42,12 +45,17 @@ export default function ProductsPage() {
   const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>(() =>
     parseList(searchParams.get("subcategory")),
   )
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "")
+  const [searchInput, setSearchInput] = useState(searchParams.get("search") || "")
   const [sort, setSort] = useState(searchParams.get("sort") || "featured")
   const [priceMin, setPriceMin] = useState(searchParams.get("minPrice") || "")
   const [priceMax, setPriceMax] = useState(searchParams.get("maxPrice") || "")
   const [priceMinInput, setPriceMinInput] = useState(priceMin)
   const [priceMaxInput, setPriceMaxInput] = useState(priceMax)
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
+  const [page, setPage] = useState(1)
+  const [pageSize] = useState(12)
+  const [totalProducts, setTotalProducts] = useState(0)
 
   const buildQueryString = useCallback(() => {
     const params = new URLSearchParams()
@@ -57,9 +65,13 @@ export default function ProductsPage() {
     if (selectedTags.length) params.set("tag", selectedTags.join(","))
     if (priceMin) params.set("minPrice", priceMin)
     if (priceMax) params.set("maxPrice", priceMax)
+    if (searchQuery) params.set("search", searchQuery)
     if (sort) params.set("sort", sort)
+    params.set("limit", String(pageSize))
+    params.set("skip", String((page - 1) * pageSize))
+    params.set("includeTotal", "true")
     return params.toString()
-  }, [priceMax, priceMin, selectedCategories, selectedOrigins, selectedSubcategories, selectedTags, sort])
+  }, [page, pageSize, priceMax, priceMin, searchQuery, selectedCategories, selectedOrigins, selectedSubcategories, selectedTags, sort])
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -67,7 +79,13 @@ export default function ProductsPage() {
       const queryString = buildQueryString()
       const response = await fetch(`/api/products${queryString ? `?${queryString}` : ""}`)
       const data = await response.json()
-      setProducts(data)
+      if (data && Array.isArray(data.items)) {
+        setProducts(data.items)
+        setTotalProducts(data.total || 0)
+      } else {
+        setProducts(data)
+        setTotalProducts(Array.isArray(data) ? data.length : 0)
+      }
     } catch (error) {
       console.error("Error fetching products:", error)
       setProducts([])
@@ -78,25 +96,15 @@ export default function ProductsPage() {
 
   const fetchFilters = useCallback(async () => {
     try {
-      const [categoriesResponse, tagsResponse, originsResponse, bannersResponse] = await Promise.all([
-        fetch("/api/categories"),
-        fetch("/api/tags"),
-        fetch("/api/products?distinct=origin"),
-        fetch("/api/banners"),
-      ])
-      const [categoriesData, tagsData, originsData] = await Promise.all([
-        categoriesResponse.json(),
-        tagsResponse.json(),
-        originsResponse.json(),
-      ])
-      setCategories(categoriesData)
-      setTags(tagsData)
-      setOrigins(originsData.filter(Boolean))
-      if (bannersResponse.ok) {
-        const bannerData = await bannersResponse.json()
-        const activeBanners = (bannerData || []).filter((banner: Banner) => banner.isActive)
-        setHeroBanner(activeBanners.find((banner: Banner) => banner.position === "products_top") || null)
-      }
+      const response = await fetch("/api/bootstrap?section=products")
+      if (!response.ok) return
+      const data = await response.json()
+      setCategories(data?.categories || [])
+      setTags(data?.tags || [])
+      const originNames = (data?.origins || []).map((origin: { name?: string }) => origin?.name).filter(Boolean)
+      setOrigins(originNames)
+      const activeBanners = (data?.banners || []).filter((banner: Banner) => banner.isActive)
+      setHeroBanner(activeBanners.find((banner: Banner) => banner.position === "products_top") || null)
     } catch (error) {
       console.error("Error fetching filters:", error)
     }
@@ -111,9 +119,19 @@ export default function ProductsPage() {
   }, [fetchProducts])
 
   useEffect(() => {
+    const currentSearch = searchParams.get("search") || ""
+    setSearchQuery(currentSearch)
+    setSearchInput(currentSearch)
+  }, [searchParams])
+
+  useEffect(() => {
     const queryString = buildQueryString()
     router.replace(`/products${queryString ? `?${queryString}` : ""}`, { scroll: false })
   }, [buildQueryString, router])
+
+  useEffect(() => {
+    setPage(1)
+  }, [selectedCategories, selectedOrigins, selectedSubcategories, selectedTags, priceMin, priceMax, sort, searchQuery])
 
   const toggleItem = (value: string, current: string[], setCurrent: (values: string[]) => void) => {
     setCurrent(current.includes(value) ? current.filter((item) => item !== value) : [...current, value])
@@ -376,6 +394,29 @@ export default function ProductsPage() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+                  <form
+                    className="relative w-full sm:w-[240px]"
+                    onSubmit={(event) => {
+                      event.preventDefault()
+                      setSearchQuery(searchInput.trim())
+                    }}
+                  >
+                    <Input
+                      value={searchInput}
+                      onChange={(event) => setSearchInput(event.target.value)}
+                      placeholder="Search products..."
+                      className="pr-9"
+                    />
+                    <Button
+                      type="submit"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-full"
+                      aria-label="Search products"
+                    >
+                      <Search className="h-4 w-4" />
+                    </Button>
+                  </form>
                   <div className="flex items-center gap-2">
                     <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setViewMode("grid")}>
                       <Grid3X3 className="h-4 w-4" />
@@ -401,31 +442,60 @@ export default function ProductsPage() {
 
               {/* Products */}
               <Suspense fallback={<ProductsGridSkeleton />}>
-                <ProductsGrid products={products} loading={loadingProducts} viewMode={viewMode} />
+                <ProductsGrid
+                  products={products}
+                  loading={loadingProducts}
+                  viewMode={viewMode}
+                  onAddToCart={(product) => {
+                    addToCart({
+                      id: product._id,
+                      name: product.name,
+                      image: product.image || product.images?.[0] || "/placeholder.svg",
+                      price: product.price ?? 0,
+                      quantity: 1,
+                      origin: product.origin || "Global",
+                    })
+                    toast({
+                      title: "Added to cart",
+                      description: `${product.name} is now in your cart.`,
+                    })
+                  }}
+                />
               </Suspense>
 
               {/* Pagination */}
               <div className="flex justify-center mt-12">
                 <div className="flex items-center gap-1">
-                  <Button variant="outline" size="icon" disabled>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    disabled={page <= 1}
+                    onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                  >
                     <ChevronDown className="h-4 w-4 rotate-90" />
                   </Button>
-                  <Button variant="outline" size="sm" className="h-8 w-8 p-0 bg-primary text-primary-foreground">
-                    1
-                  </Button>
-                  <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                    2
-                  </Button>
-                  <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                    3
-                  </Button>
-                  <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                    ...
-                  </Button>
-                  <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                    12
-                  </Button>
-                  <Button variant="outline" size="icon">
+                  {Array.from({ length: Math.max(1, Math.min(5, Math.ceil(totalProducts / pageSize))) }).map(
+                    (_, index) => {
+                      const pageNumber = index + 1
+                      return (
+                        <Button
+                          key={pageNumber}
+                          variant="outline"
+                          size="sm"
+                          className={`h-8 w-8 p-0 ${page === pageNumber ? "bg-primary text-primary-foreground" : ""}`}
+                          onClick={() => setPage(pageNumber)}
+                        >
+                          {pageNumber}
+                        </Button>
+                      )
+                    },
+                  )}
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    disabled={page >= Math.ceil(totalProducts / pageSize)}
+                    onClick={() => setPage((prev) => prev + 1)}
+                  >
                     <ChevronDown className="h-4 w-4 -rotate-90" />
                   </Button>
                 </div>
@@ -440,7 +510,17 @@ export default function ProductsPage() {
   )
 }
 
-function ProductsGrid({ products, loading, viewMode }: { products: Product[]; loading: boolean; viewMode: "grid" | "list" }) {
+function ProductsGrid({
+  products,
+  loading,
+  viewMode,
+  onAddToCart,
+}: {
+  products: Product[]
+  loading: boolean
+  viewMode: "grid" | "list"
+  onAddToCart: (product: Product) => void
+}) {
   if (loading) {
     return <ProductsGridSkeleton />
   }
@@ -483,13 +563,28 @@ function ProductsGrid({ products, loading, viewMode }: { products: Product[]; lo
               )}
               <div className="flex items-center justify-between">
                 <span className="font-bold">{formatPrice(product.price)}</span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
-                >
-                  View Details
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
+                  >
+                    View Details
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
+                    onClick={(event) => {
+                      event.preventDefault()
+                      event.stopPropagation()
+                      onAddToCart(product)
+                    }}
+                    aria-label="Add to cart"
+                  >
+                    <ShoppingCart className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

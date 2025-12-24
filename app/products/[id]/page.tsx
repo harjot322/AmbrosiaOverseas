@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { Globe, Star, ShoppingCart } from "lucide-react"
+import { useParams } from "next/navigation"
 
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
@@ -10,6 +11,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useToast } from "@/hooks/use-toast"
+import { addToCart } from "@/lib/cart"
 import type { Product } from "@/types/types"
 
 const formatPrice = (value?: number) => {
@@ -17,7 +20,10 @@ const formatPrice = (value?: number) => {
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(value)
 }
 
-export default function ProductPage({ params }: { params: { id: string } }) {
+export default function ProductPage() {
+  const params = useParams()
+  const { toast } = useToast()
+  const productId = typeof params?.id === "string" ? params.id : ""
   const [product, setProduct] = useState<Product | null>(null)
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
@@ -26,7 +32,10 @@ export default function ProductPage({ params }: { params: { id: string } }) {
   const fetchProduct = useCallback(async () => {
     try {
       setLoading(true)
-      const response = await fetch(`/api/products/${params.id}`)
+      if (!productId) {
+        throw new Error("Missing product id")
+      }
+      const response = await fetch(`/api/products/${productId}`)
       if (!response.ok) {
         throw new Error("Product not found")
       }
@@ -39,7 +48,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
     } finally {
       setLoading(false)
     }
-  }, [params.id])
+  }, [productId])
 
   const fetchRelatedProducts = useCallback(async (category?: string, productId?: string) => {
     if (!category || !productId) {
@@ -196,7 +205,24 @@ export default function ProductPage({ params }: { params: { id: string } }) {
               )}
 
               <div className="pt-4">
-                <Button className="w-full gold-gradient text-black font-semibold">
+                <Button
+                  className="w-full gold-gradient text-black font-semibold"
+                  onClick={() => {
+                    if (!product) return
+                    addToCart({
+                      id: product._id,
+                      name: product.name,
+                      image: product.image || product.images?.[0] || "/placeholder.svg",
+                      price: product.price ?? 0,
+                      quantity: 1,
+                      origin: product.origin || "Global",
+                    })
+                    toast({
+                      title: "Added to cart",
+                      description: `${product.name} is now in your cart.`,
+                    })
+                  }}
+                >
                   <ShoppingCart className="mr-2 h-4 w-4" />
                   Add to Cart
                 </Button>

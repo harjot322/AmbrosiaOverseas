@@ -42,13 +42,13 @@ export default function ContactPage() {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const response = await fetch("/api/settings")
+        const response = await fetch("/api/bootstrap?section=contact")
         if (!response.ok) return
         const data = await response.json()
-        if (data) {
+        if (data?.settings) {
           setSettings((prev) => ({
             ...prev,
-            ...data,
+            ...data.settings,
           }))
         }
       } catch (error) {

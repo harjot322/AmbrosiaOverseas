@@ -67,6 +67,7 @@ export default function SettingsPage() {
     aboutHeroTitle: "About Ambrosia Overseas",
     aboutHeroSubtitle: "Bringing the finest imported food products to India since 2015.",
     aboutHeroImage: "/Classic.png?height=400&width=1920",
+    aboutStoryImage: "/AmbrosiaOverseas.png?height=800&width=800",
     aboutStoryParagraphs: [
       "Ambrosia Overseas was founded in 2024 with a simple mission: to bring the finest imported food products from around the world to Indian consumers. What started as a small passion project has now grown into one of India's leading retailers of gourmet and specialty food items.",
       "Our founder, Ayansh Jaiswal, traveled extensively and was always fascinated by the diverse flavors and food products available globally. He noticed a gap in the Indian market for authentic, high-quality imported foods and decided to bridge this gap by establishing Ambrosia Overseas.",
@@ -115,6 +116,9 @@ export default function SettingsPage() {
     aboutCtaSubtitle: "Browse our extensive collection of imported food products and discover new flavors today.",
     aboutCtaButtonText: "View All Products",
     aboutCtaButtonLink: "/products",
+    loginHeroTitle: "Welcome to Ambrosia Overseas",
+    loginHeroSubtitle: "Sign in to your account or create a new one to explore our premium imported food products.",
+    loginHeroImage: "/placeholder.svg?height=800&width=800",
   })
 
   const fetchSettings = useCallback(async () => {
@@ -179,7 +183,8 @@ export default function SettingsPage() {
       })
 
       if (!response.ok) {
-        throw new Error("Failed to save settings")
+        const errorBody = await response.json().catch(() => ({}))
+        throw new Error(errorBody.error || "Failed to save settings")
       }
 
       toast({
@@ -190,7 +195,7 @@ export default function SettingsPage() {
       console.error("Error saving settings:", error)
       toast({
         title: "Error",
-        description: "Failed to save settings",
+        description: error instanceof Error ? error.message : "Failed to save settings",
         variant: "destructive",
       })
     } finally {
@@ -210,6 +215,15 @@ export default function SettingsPage() {
 
   const handleSwitchChange = (name: string, checked: boolean) => {
     setSettings((prev) => ({ ...prev, [name]: checked, }));
+  }
+
+  const handleImageUpload = (field: string, file?: File | null) => {
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      setSettings((prev) => ({ ...prev, [field]: reader.result as string }))
+    }
+    reader.readAsDataURL(file)
   }
 
   const handleHomeWhyChooseChange = (index: number, field: "title" | "description", value: string) => {
@@ -277,6 +291,7 @@ export default function SettingsPage() {
           <TabsTrigger value="home">Home</TabsTrigger>
           <TabsTrigger value="about">About</TabsTrigger>
           <TabsTrigger value="contact">Contact</TabsTrigger>
+          <TabsTrigger value="login">Login</TabsTrigger>
           <TabsTrigger value="social">Social Media</TabsTrigger>
           <TabsTrigger value="tax">Tax Settings</TabsTrigger>
           <TabsTrigger value="advanced">Advanced</TabsTrigger>
@@ -297,6 +312,11 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <Label htmlFor="logo">Logo URL</Label>
                   <Input id="logo" name="logo" value={settings.logo} onChange={handleChange} />
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleImageUpload("logo", e.target.files?.[0])}
+                  />
                 </div>
               </div>
 
@@ -315,6 +335,11 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <Label htmlFor="favicon">Favicon URL</Label>
                   <Input id="favicon" name="favicon" value={settings.favicon} onChange={handleChange} />
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleImageUpload("favicon", e.target.files?.[0])}
+                  />
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -356,6 +381,11 @@ export default function SettingsPage() {
               <div className="space-y-2">
                 <Label htmlFor="homeHeroImage">Hero Image URL</Label>
                 <Input id="homeHeroImage" name="homeHeroImage" value={settings.homeHeroImage} onChange={handleChange} />
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleImageUpload("homeHeroImage", e.target.files?.[0])}
+                />
               </div>
 
               <div className="space-y-2">
@@ -448,6 +478,26 @@ export default function SettingsPage() {
               <div className="space-y-2">
                 <Label htmlFor="aboutHeroImage">Hero Image URL</Label>
                 <Input id="aboutHeroImage" name="aboutHeroImage" value={settings.aboutHeroImage} onChange={handleChange} />
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleImageUpload("aboutHeroImage", e.target.files?.[0])}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="aboutStoryImage">Story Image URL</Label>
+                <Input
+                  id="aboutStoryImage"
+                  name="aboutStoryImage"
+                  value={settings.aboutStoryImage}
+                  onChange={handleChange}
+                />
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleImageUpload("aboutStoryImage", e.target.files?.[0])}
+                />
               </div>
 
               <div className="space-y-4">
@@ -619,6 +669,11 @@ export default function SettingsPage() {
                   value={settings.contactHeroImage}
                   onChange={handleChange}
                 />
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleImageUpload("contactHeroImage", e.target.files?.[0])}
+                />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -640,6 +695,50 @@ export default function SettingsPage() {
                     onChange={handleChange}
                   />
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="login" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Login Page</CardTitle>
+              <CardDescription>Hero text and imagery for authentication.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="loginHeroTitle">Hero Title</Label>
+                <Input
+                  id="loginHeroTitle"
+                  name="loginHeroTitle"
+                  value={settings.loginHeroTitle}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="loginHeroSubtitle">Hero Subtitle</Label>
+                <Textarea
+                  id="loginHeroSubtitle"
+                  name="loginHeroSubtitle"
+                  value={settings.loginHeroSubtitle}
+                  onChange={handleChange}
+                  rows={2}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="loginHeroImage">Hero Image URL</Label>
+                <Input
+                  id="loginHeroImage"
+                  name="loginHeroImage"
+                  value={settings.loginHeroImage}
+                  onChange={handleChange}
+                />
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleImageUpload("loginHeroImage", e.target.files?.[0])}
+                />
               </div>
             </CardContent>
           </Card>

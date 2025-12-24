@@ -4,20 +4,24 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { ArrowLeft } from "lucide-react"
+import { useParams } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import type { Product } from "@/types/types"
 
-export default function AdminProductView({ params }: { params: { id: string } }) {
+export default function AdminProductView() {
+  const params = useParams()
+  const productId = typeof params?.id === "string" ? params.id : ""
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const response = await fetch(`/api/products/${params.id}`)
+        if (!productId) return
+      const response = await fetch(`/api/products/${productId}?includeInactive=true`)
         if (!response.ok) return
         const data = await response.json()
         setProduct(data)
@@ -29,7 +33,7 @@ export default function AdminProductView({ params }: { params: { id: string } })
     }
 
     fetchProduct()
-  }, [params.id])
+  }, [productId])
 
   if (loading) {
     return <div className="p-6 text-muted-foreground">Loading product...</div>

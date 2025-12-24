@@ -54,61 +54,29 @@ export default function Home() {
   })
 
   useEffect(() => {
-    const loadSettings = async () => {
+    const loadHome = async () => {
       try {
-        const response = await fetch("/api/settings")
+        const response = await fetch("/api/bootstrap?section=home")
         if (!response.ok) return
         const data = await response.json()
-        if (data) {
+        if (data?.settings) {
           setSettings((prev) => ({
             ...prev,
-            ...data,
+            ...data.settings,
           }))
         }
-      } catch (error) {
-        console.error("Error loading settings:", error)
-      }
-    }
-
-    const loadBanners = async () => {
-      try {
-        const response = await fetch("/api/banners")
-        if (!response.ok) return
-        const data = await response.json()
-        const activeBanners = (data || []).filter((banner: Banner) => banner.isActive)
+        const activeBanners = (data?.banners || []).filter((banner: Banner) => banner.isActive)
         setHeroBanner(activeBanners.find((banner: Banner) => banner.position === "home_hero") || null)
         setFeaturedBanners(activeBanners.filter((banner: Banner) => banner.position === "home_featured"))
+        setFeaturedProducts(data?.featuredProducts || [])
+        const originNames = (data?.origins || []).map((origin: { name?: string }) => origin?.name).filter(Boolean)
+        setOrigins(originNames)
       } catch (error) {
-        console.error("Error loading banners:", error)
+        console.error("Error loading home data:", error)
       }
     }
 
-    const loadFeaturedProducts = async () => {
-      try {
-        const response = await fetch("/api/products?featured=true&limit=4&sort=featured")
-        if (!response.ok) return
-        const data = await response.json()
-        setFeaturedProducts(data)
-      } catch (error) {
-        console.error("Error loading featured products:", error)
-      }
-    }
-
-    const loadOrigins = async () => {
-      try {
-        const response = await fetch("/api/products?distinct=origin")
-        if (!response.ok) return
-        const data = await response.json()
-        setOrigins(data.filter(Boolean))
-      } catch (error) {
-        console.error("Error loading origins:", error)
-      }
-    }
-
-    loadSettings()
-    loadBanners()
-    loadFeaturedProducts()
-    loadOrigins()
+    loadHome()
   }, [])
 
   const heroTitle = heroBanner?.title || settings.homeHeroTitle
@@ -205,16 +173,14 @@ export default function Home() {
       {/* Featured Products */}
       <section className="py-20 bg-background">
         <div className="container px-4">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12">
-            <div>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                <span className="gold-text">Featured</span> Products
-              </h2>
-              <p className="text-muted-foreground max-w-2xl">
-                Our most popular premium imported products, handpicked for exceptional quality and taste.
-              </p>
-            </div>
-            <Link href="/products" className="inline-flex items-center text-primary font-medium mt-4 md:mt-0">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              <span className="gold-text">Featured</span> Products
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Our most popular premium imported products, handpicked for exceptional quality and taste.
+            </p>
+            <Link href="/products" className="inline-flex items-center text-primary font-medium mt-6">
               <span>View All Products</span>
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
@@ -282,13 +248,14 @@ export default function Home() {
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-6">
             {(origins.length > 0 ? origins : ["Global"]).map((country) => (
-              <div
+              <Link
                 key={country}
+                href={`/products?origin=${encodeURIComponent(country)}`}
                 className="flex flex-col items-center p-4 bg-card/10 rounded-lg hover:bg-card/20 transition-colors"
               >
                 <Globe className="h-10 w-10 text-primary mb-3" />
                 <span className="font-medium">{country}</span>
-              </div>
+              </Link>
             ))}
           </div>
         </div>

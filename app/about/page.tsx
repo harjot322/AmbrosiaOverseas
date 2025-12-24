@@ -36,6 +36,7 @@ export default function AboutPage() {
     aboutHeroTitle: "About Ambrosia Overseas",
     aboutHeroSubtitle: "Bringing the finest imported food products to India since 2015.",
     aboutHeroImage: "/Classic.png?height=400&width=1920",
+    aboutStoryImage: "/AmbrosiaOverseas.png?height=800&width=800",
     aboutStoryParagraphs: [
       "Ambrosia Overseas was founded in 2024 with a simple mission: to bring the finest imported food products from around the world to Indian consumers. What started as a small passion project has now grown into one of India's leading retailers of gourmet and specialty food items.",
       "Our founder, Ayansh Jaiswal, traveled extensively and was always fascinated by the diverse flavors and food products available globally. He noticed a gap in the Indian market for authentic, high-quality imported foods and decided to bridge this gap by establishing Ambrosia Overseas.",
@@ -120,7 +121,7 @@ export default function AboutPage() {
           <div className="container px-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <div className="relative h-[400px] rounded-lg overflow-hidden">
-                <Image src="/AmbrosiaOverseas.png?height=800&width=800" alt="Our Story" fill className="object-cover" />
+                <Image src={settings.aboutStoryImage} alt="Our Story" fill className="object-cover" />
               </div>
 
               <div className="space-y-6">

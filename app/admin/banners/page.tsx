@@ -26,6 +26,8 @@ export default function BannersPage() {
   const { toast } = useToast()
   const [loading, setLoading] = useState(true)
   const [banners, setBanners] = useState<Banner[]>([])
+  const [createOpen, setCreateOpen] = useState(false)
+  const [createPosition, setCreatePosition] = useState<Banner["position"]>("home_hero")
   const [newBanner, setNewBanner] = useState<Omit<Banner, '_id'>>({
     title: "",
     subtitle: "",
@@ -35,6 +37,26 @@ export default function BannersPage() {
     isActive: true,
   })
   const [editBanner, setEditBanner] = useState<Banner | null>(null)
+
+  const positionMeta: { value: Banner["position"]; label: string; size: string }[] = [
+    { value: "home_hero", label: "Home Page Hero", size: "1920x900 (16:9)" },
+    { value: "home_featured", label: "Home Featured Tiles", size: "800x600 (4:3)" },
+    { value: "products_top", label: "Products Page Hero", size: "1920x600 (16:5)" },
+    { value: "about_page", label: "About Page Hero", size: "1920x600 (16:5)" },
+  ]
+
+  const handleBannerImageUpload = (file: File | null | undefined, isEdit = false) => {
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (isEdit) {
+        setEditBanner((prev) => (prev ? { ...prev, imageUrl: reader.result as string } : prev))
+      } else {
+        setNewBanner((prev) => ({ ...prev, imageUrl: reader.result as string }))
+      }
+    }
+    reader.readAsDataURL(file)
+  }
 
   const fetchBanners = useCallback(async () => {
     try {
@@ -58,7 +80,20 @@ export default function BannersPage() {
     fetchBanners()
   }, [fetchBanners])
 
+  useEffect(() => {
+    setNewBanner((prev) => ({ ...prev, position: createPosition }))
+  }, [createPosition])
+
   const handleCreateBanner = async () => {
+    if (!newBanner.title || !newBanner.imageUrl) {
+      toast({
+        title: "Missing fields",
+        description: "Title and image are required.",
+        variant: "destructive",
+      })
+      return
+    }
+
     try {
       const response = await fetch("/api/banners", {
         method: "POST",
@@ -69,7 +104,8 @@ export default function BannersPage() {
       })
 
       if (!response.ok) {
-        throw new Error("Failed to create banner")
+        const errorBody = await response.json().catch(() => ({}))
+        throw new Error(errorBody.error || "Failed to create banner")
       }
 
       toast({
@@ -92,7 +128,7 @@ export default function BannersPage() {
       console.error("Error creating banner:", error)
       toast({
         title: "Error",
-        description: "Failed to create banner",
+        description: error instanceof Error ? error.message : "Failed to create banner",
         variant: "destructive",
       })
     }
@@ -176,9 +212,14 @@ export default function BannersPage() {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Banners</h1>
-        <Dialog>
+        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button
+              onClick={() => {
+                setCreatePosition("home_hero")
+                setCreateOpen(true)
+              }}
+            >
               <Plus className="mr-2 h-4 w-4" />
               Add Banner
             </Button>
@@ -220,6 +261,9 @@ export default function BannersPage() {
                       <SelectItem value="about_page">About Page</SelectItem>
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Recommended size: {positionMeta.find((item) => item.value === newBanner.position)?.size || "1920x600"}
+                  </p>
                 </div>
               </div>
 
@@ -252,6 +296,11 @@ export default function BannersPage() {
                     <ImageIcon className="h-4 w-4" />
                   </Button>
                 </div>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleBannerImageUpload(e.target.files?.[0])}
+                />
                 <p className="text-xs text-muted-foreground">
                   Recommended size: 1920x600px for hero banners, 800x600px for others
                 </p>
@@ -308,73 +357,101 @@ export default function BannersPage() {
 
       {loading ? (
         <div className="text-center py-8">Loading banners...</div>
-      ) : banners.length === 0 ? (
-        <div className="text-center py-8">
-          <p className="text-muted-foreground">No banners found. Create your first banner to get started.</p>
-        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {banners.map((banner) => (
-            <Card key={banner._id} className="overflow-hidden">
-              <div className="relative aspect-video overflow-hidden bg-muted">
-                {banner.imageUrl ? (
-                  <img
-                    src={banner.imageUrl || "/placeholder.svg"}
-                    alt={banner.title}
-                    className="object-cover w-full h-full"
-                  />
-                ) : (
-                  <div className="flex items-center justify-center h-full">
-                    <ImageIcon className="h-12 w-12 text-muted-foreground/50" />
+        <div className="space-y-10">
+          {positionMeta.map((position) => {
+            const sectionBanners = banners.filter((banner) => banner.position === position.value)
+            return (
+              <div key={position.value} className="space-y-4">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                  <div>
+                    <h2 className="text-xl font-semibold">{position.label}</h2>
+                    <p className="text-sm text-muted-foreground">Recommended size: {position.size}</p>
                   </div>
-                )}
-                <div className="absolute top-2 right-2 flex gap-1">
                   <Button
-                    variant="secondary"
-                    size="icon"
-                    className="h-8 w-8 bg-background/80 backdrop-blur-sm"
-                    onClick={() => setEditBanner(banner)}
+                    variant="outline"
+                    onClick={() => {
+                      setCreatePosition(position.value)
+                      setCreateOpen(true)
+                    }}
                   >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    className="h-8 w-8 bg-destructive/80 backdrop-blur-sm"
-                    onClick={() => handleDeleteBanner(banner._id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add {position.label}
                   </Button>
                 </div>
-                {!banner.isActive && (
-                  <div className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm text-xs px-2 py-1 rounded">
-                    Inactive
+
+                {sectionBanners.length === 0 ? (
+                  <p className="text-muted-foreground">No banners for this section yet.</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {sectionBanners.map((banner) => (
+                      <Card key={banner._id} className="overflow-hidden">
+                        <div className="relative aspect-video overflow-hidden bg-muted">
+                          {banner.imageUrl ? (
+                            <img
+                              src={banner.imageUrl || "/placeholder.svg"}
+                              alt={banner.title}
+                              className="object-cover w-full h-full"
+                            />
+                          ) : (
+                            <div className="flex items-center justify-center h-full">
+                              <ImageIcon className="h-12 w-12 text-muted-foreground/50" />
+                            </div>
+                          )}
+                          <div className="absolute top-2 right-2 flex gap-1">
+                            <Button
+                              variant="secondary"
+                              size="icon"
+                              className="h-8 w-8 bg-background/80 backdrop-blur-sm"
+                              onClick={() => setEditBanner(banner)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="icon"
+                              className="h-8 w-8 bg-destructive/80 backdrop-blur-sm"
+                              onClick={() => handleDeleteBanner(banner._id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          {!banner.isActive && (
+                            <div className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm text-xs px-2 py-1 rounded">
+                              Inactive
+                            </div>
+                          )}
+                        </div>
+                        <CardContent className="p-4">
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <h3 className="font-semibold truncate">{banner.title}</h3>
+                              {banner.linkUrl && (
+                                <a
+                                  href={banner.linkUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-primary hover:underline"
+                                >
+                                  <ExternalLink className="h-4 w-4" />
+                                </a>
+                              )}
+                            </div>
+                            {banner.subtitle && (
+                              <p className="text-sm text-muted-foreground line-clamp-2">{banner.subtitle}</p>
+                            )}
+                            <div className="text-xs text-muted-foreground">
+                              Position: {banner.position.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
                   </div>
                 )}
               </div>
-              <CardContent className="p-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold truncate">{banner.title}</h3>
-                    {banner.linkUrl && (
-                      <a
-                        href={banner.linkUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                    )}
-                  </div>
-                  {banner.subtitle && <p className="text-sm text-muted-foreground line-clamp-2">{banner.subtitle}</p>}
-                  <div className="text-xs text-muted-foreground">
-                    Position: {banner.position.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+            )
+          })}
         </div>
       )}
 
@@ -406,7 +483,9 @@ export default function BannersPage() {
                   </label>
                   <Select
                     value={editBanner.position}
-                    onValueChange={(value) => setEditBanner({ ...editBanner, position: value as "home_hero" | "home_featured" | "products_top" | "about_page" })}
+                    onValueChange={(value) =>
+                      setEditBanner({ ...editBanner, position: value as "home_hero" | "home_featured" | "products_top" | "about_page" })
+                    }
                   >
                     <SelectTrigger id="edit-position">
                       <SelectValue placeholder="Select position" />
@@ -418,6 +497,9 @@ export default function BannersPage() {
                       <SelectItem value="about_page">About Page</SelectItem>
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Recommended size: {positionMeta.find((item) => item.value === editBanner.position)?.size || "1920x600"}
+                  </p>
                 </div>
               </div>
 
@@ -450,6 +532,11 @@ export default function BannersPage() {
                     <ImageIcon className="h-4 w-4" />
                   </Button>
                 </div>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleBannerImageUpload(e.target.files?.[0], true)}
+                />
                 <p className="text-xs text-muted-foreground">
                   Recommended size: 1920x600px for hero banners, 800x600px for others
                 </p>

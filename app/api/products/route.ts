@@ -1,10 +1,19 @@
 import { NextResponse } from "next/server"
 import { ObjectId } from "mongodb"
 import { getDb, getProducts, createProduct } from "@/lib/db-service"
+import { getCached, setCached, invalidateCacheByPrefix } from "@/lib/api-cache"
+import { getSession, isAdmin } from "@/lib/auth"
+import { isSameOrigin } from "@/lib/csrf"
+import { logAdminAction } from "@/lib/audit"
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
+    const cacheKey = request.url
+    const cached = getCached(cacheKey)
+    if (cached) {
+      return NextResponse.json(cached)
+    }
     const category = searchParams.get("category")
     const origin = searchParams.get("origin")
     const subcategory = searchParams.get("subcategory")
@@ -18,6 +27,8 @@ export async function GET(request: Request) {
     const skip = searchParams.get("skip")
     const excludeId = searchParams.get("excludeId")
     const distinct = searchParams.get("distinct")
+    const includeTotal = searchParams.get("includeTotal")
+    const includeInactive = searchParams.get("includeInactive")
 
     const filters: any = {}
 
@@ -52,6 +63,9 @@ export async function GET(request: Request) {
     if (featured === "true") {
       filters.featured = true
     }
+    if (includeInactive !== "true") {
+      filters.active = true
+    }
 
     if (excludeId) {
       try {
@@ -75,12 +89,17 @@ export async function GET(request: Request) {
       filters.$or = [
         { name: { $regex: search, $options: "i" } },
         { description: { $regex: search, $options: "i" } },
+        { category: { $regex: search, $options: "i" } },
+        { subcategory: { $regex: search, $options: "i" } },
+        { origin: { $regex: search, $options: "i" } },
+        { tags: { $elemMatch: { $regex: search, $options: "i" } } },
       ]
     }
 
     if (distinct) {
       const db = await getDb()
       const values = await db.collection("products").distinct(distinct, filters)
+      setCached(cacheKey, values, 15_000)
       return NextResponse.json(values)
     }
 
@@ -100,6 +119,14 @@ export async function GET(request: Request) {
       limit: limit ? Number(limit) : undefined,
       skip: skip ? Number(skip) : undefined,
     })
+    if (includeTotal === "true") {
+      const db = await getDb()
+      const total = await db.collection("products").countDocuments(filters)
+      const payload = { items: products, total }
+      setCached(cacheKey, payload, 15_000)
+      return NextResponse.json(payload)
+    }
+    setCached(cacheKey, products, 15_000)
     return NextResponse.json(products)
   } catch (error) {
     console.error("Error fetching products:", error)
@@ -109,8 +136,25 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const session = await getSession()
+    if (!session || !isAdmin(session)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    if (!isSameOrigin(request)) {
+      return NextResponse.json({ error: "Invalid CSRF origin" }, { status: 403 })
+    }
+
     const body = await request.json()
     const result = await createProduct(body)
+    invalidateCacheByPrefix("/api/products")
+    invalidateCacheByPrefix("/api/bootstrap")
+    await logAdminAction({
+      session,
+      request,
+      action: "create",
+      resource: "product",
+      resourceId: String(result.insertedId),
+    })
 
     return NextResponse.json(
       {

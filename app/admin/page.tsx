@@ -23,6 +23,13 @@ import { Package, Users, Eye, TrendingUp, ArrowUpRight, ArrowDownRight, RefreshC
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 interface Analytics {
   pageViewsByMonth: { _id: { month: number; year: number }; count: number }[]
@@ -43,6 +50,11 @@ export default function AdminDashboard() {
   const [refreshing, setRefreshing] = useState(false)
   const [period, setPeriod] = useState("last_month")
   const [lastUpdated, setLastUpdated] = useState("")
+  const [selectedProduct, setSelectedProduct] = useState<{ id: string; name: string } | null>(null)
+  const [userViews, setUserViews] = useState<
+    { userId: string; name: string; email: string; views: number; lastViewed: string }[]
+  >([])
+  const [loadingUsers, setLoadingUsers] = useState(false)
   const [analytics, setAnalytics] = useState<Analytics>({
     pageViewsByMonth: [],
     pageViewsByPage: [],
@@ -148,11 +160,17 @@ export default function AdminDashboard() {
     }
 
     return analytics.topProducts.map((item) => ({
+      id: item._id,
       name: item.name.length > 20 ? item.name.substring(0, 20) + "..." : item.name,
+      fullName: item.name,
       views: item.views,
       price: item.price,
     }))
   }
+
+  const topProductsData = formatTopProductsData()
+  const maxTopViews = topProductsData.reduce((max, item) => Math.max(max, item.views || 0), 0)
+  const topViewsUpperBound = maxTopViews > 0 ? Math.ceil(maxTopViews * 1.25) : "auto"
 
   // Sample data for charts (would be replaced by real data in production)
   const categoryData = [
@@ -166,7 +184,31 @@ export default function AdminDashboard() {
 
   const COLORS = ["#d4af37", "#1f2937", "#4b5563", "#6b7280", "#9ca3af", "#d1d5db"]
 
+  const handleProductBarClick = async (data: { id?: string; fullName?: string }) => {
+    if (!data?.id) return
+    setSelectedProduct({ id: data.id, name: data.fullName || "Product" })
+    setLoadingUsers(true)
+    try {
+      const response = await fetch(`/api/analytics?type=product-view-users&productId=${data.id}&hours=24`)
+      if (!response.ok) {
+        throw new Error("Failed to fetch users")
+      }
+      const result = await response.json()
+      setUserViews(result || [])
+    } catch (error) {
+      console.error("Error loading product view users:", error)
+      toast({
+        title: "Error",
+        description: "Failed to load user views for this product.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoadingUsers(false)
+    }
+  }
+
   return (
+    <>
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Dashboard</h1>
@@ -353,18 +395,44 @@ export default function AdminDashboard() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Top Products by Views</CardTitle>
+              <CardTitle>Top Products by Views (Last 24h)</CardTitle>
             </CardHeader>
             <CardContent className="pl-2">
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={formatTopProductsData()}>
+                <BarChart data={topProductsData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="views" fill="#d4af37" />
+                  <YAxis domain={[0, topViewsUpperBound]} />
+                  <Tooltip formatter={(value) => [value, "Views (24h)"]} />
+                  <Bar
+                    dataKey="views"
+                    fill="#d4af37"
+                    onClick={(data) => handleProductBarClick(data?.payload || {})}
+                  />
                 </BarChart>
               </ResponsiveContainer>
+              {topProductsData.length > 0 && (
+                <div className="mt-6 border rounded-lg overflow-hidden">
+                  <div className="grid grid-cols-[minmax(0,1fr)_120px_80px] gap-4 bg-muted px-4 py-2 text-xs font-semibold uppercase text-muted-foreground">
+                    <span>Product</span>
+                    <span className="text-right">Views (24h)</span>
+                    <span className="text-right">Trend</span>
+                  </div>
+                  <div className="divide-y">
+                    {topProductsData.map((item) => (
+                      <button
+                        key={item.id}
+                        className="grid w-full grid-cols-[minmax(0,1fr)_120px_80px] items-center gap-4 px-4 py-3 text-sm hover:bg-muted/50 text-left"
+                        onClick={() => handleProductBarClick({ id: item.id, fullName: item.fullName })}
+                      >
+                        <span className="truncate">{item.fullName}</span>
+                        <span className="text-right font-medium tabular-nums">{item.views}</span>
+                        <span className="text-right text-emerald-600">▲</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -401,12 +469,16 @@ export default function AdminDashboard() {
                   <div>
                     <h3 className="text-lg font-medium mb-4">Top Products by Views</h3>
                     <ResponsiveContainer width="100%" height={300}>
-                      <BarChart data={formatTopProductsData()}>
+                      <BarChart data={topProductsData}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="name" />
-                        <YAxis />
-                        <Tooltip />
-                        <Bar dataKey="views" fill="#d4af37" />
+                        <YAxis domain={[0, topViewsUpperBound]} />
+                        <Tooltip formatter={(value) => [value, "Views (24h)"]} />
+                        <Bar
+                          dataKey="views"
+                          fill="#d4af37"
+                          onClick={(data) => handleProductBarClick(data?.payload || {})}
+                        />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -424,14 +496,19 @@ export default function AdminDashboard() {
             <CardContent>
               <div className="space-y-8">
                 <div>
-                  <h3 className="text-lg font-medium mb-4">Top Products by Views</h3>
+                  <h3 className="text-lg font-medium mb-4">Top Products by Views (Last 24h)</h3>
                   <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={formatTopProductsData()}>
+                    <BarChart data={topProductsData}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="views" fill="#d4af37" name="Views" />
+                      <YAxis domain={[0, topViewsUpperBound]} />
+                      <Tooltip formatter={(value) => [value, "Views (24h)"]} />
+                      <Bar
+                        dataKey="views"
+                        fill="#d4af37"
+                        name="Views"
+                        onClick={(data) => handleProductBarClick(data?.payload || {})}
+                      />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -464,5 +541,36 @@ export default function AdminDashboard() {
         </TabsContent>
       </Tabs>
     </div>
+    <Dialog open={!!selectedProduct} onOpenChange={() => setSelectedProduct(null)}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{selectedProduct?.name || "Product"} - Viewers</DialogTitle>
+          <DialogDescription>Users who viewed this product in the last 24 hours.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          {loadingUsers ? (
+            <p className="text-sm text-muted-foreground">Loading viewers...</p>
+          ) : userViews.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No logged-in users viewed this product in the last 24 hours.</p>
+          ) : (
+            <div className="space-y-3">
+              {userViews.map((user) => (
+                <div key={user.userId} className="flex items-center justify-between border-b pb-2">
+                  <div>
+                    <p className="font-medium">{user.name}</p>
+                    <p className="text-xs text-muted-foreground">{user.email}</p>
+                  </div>
+                  <div className="text-sm text-muted-foreground text-right">
+                    <p>{user.views} views</p>
+                    <p>Last: {new Date(user.lastViewed).toLocaleString()}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }

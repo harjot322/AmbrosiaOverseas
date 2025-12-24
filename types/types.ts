@@ -53,7 +53,15 @@ export interface Product {
     updatedAt?: Date
   }
   
-  export interface Tag {
+export interface Tag {
+    _id: string
+    name: string
+    slug: string
+    createdAt?: Date
+    updatedAt?: Date
+  }
+
+  export interface Origin {
     _id: string
     name: string
     slug: string
