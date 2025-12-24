@@ -1,3 +1,5 @@
+"use client";
+import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { Globe, Award, TrendingUp, Star } from "lucide-react"
@@ -6,7 +8,95 @@ import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 
+const defaultWhyChoose = [
+  {
+    icon: <Award className="h-10 w-10 text-primary" />,
+    title: "Premium Quality",
+    description: "We source only the highest quality products from reputable international brands.",
+  },
+  {
+    icon: <Globe className="h-10 w-10 text-primary" />,
+    title: "Global Selection",
+    description: "Explore flavors from around the world, all in one place.",
+  },
+  {
+    icon: <TrendingUp className="h-10 w-10 text-primary" />,
+    title: "Exclusive Products",
+    description: "Access to rare and exclusive imported products not found elsewhere.",
+  },
+  {
+    icon: <Star className="h-10 w-10 text-primary" />,
+    title: "Curated Experience",
+    description: "Each product is carefully selected to ensure exceptional taste and quality.",
+  },
+]
+
 export default function AboutPage() {
+  const [settings, setSettings] = useState({
+    aboutHeroTitle: "About Ambrosia Overseas",
+    aboutHeroSubtitle: "Bringing the finest imported food products to India since 2015.",
+    aboutHeroImage: "/Classic.png?height=400&width=1920",
+    aboutStoryImage: "/AmbrosiaOverseas.png?height=800&width=800",
+    aboutStoryParagraphs: [
+      "Ambrosia Overseas was founded in 2024 with a simple mission: to bring the finest imported food products from around the world to Indian consumers. What started as a small passion project has now grown into one of India's leading retailers of gourmet and specialty food items.",
+      "Our founder, Ayansh Jaiswal, traveled extensively and was always fascinated by the diverse flavors and food products available globally. He noticed a gap in the Indian market for authentic, high-quality imported foods and decided to bridge this gap by establishing Ambrosia Overseas.",
+      "Today, we source products from over 20 countries, working directly with manufacturers and suppliers to ensure that only the best products reach our customers. Our extensive range includes beverages, snacks, cookies, breakfast cereals, protein bars, and more.",
+    ],
+    aboutMission: "To introduce Indian consumers to the finest global flavors and food products, curated with passion and delivered with excellence.",
+    aboutWhyChoose: defaultWhyChoose.map(({ title, description }) => ({ title, description })),
+    aboutProcessSteps: [
+      {
+        number: "01",
+        title: "Sourcing",
+        description:
+          "We carefully select products from reputable manufacturers around the world, focusing on quality, authenticity, and uniqueness.",
+      },
+      {
+        number: "02",
+        title: "Quality Control",
+        description:
+          "Each product undergoes rigorous quality checks to ensure it meets our high standards before being added to our inventory.",
+      },
+      {
+        number: "03",
+        title: "Showcase",
+        description:
+          "We showcase our premium products through our website and physical displays, providing detailed information about each item.",
+      },
+    ],
+    aboutCtaTitle: "Ready to Explore Premium Flavors?",
+    aboutCtaSubtitle: "Browse our extensive collection of imported food products and discover new flavors today.",
+    aboutCtaButtonText: "View All Products",
+    aboutCtaButtonLink: "/products",
+  })
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await fetch("/api/settings")
+        if (!response.ok) return
+        const data = await response.json()
+        if (data) {
+          setSettings((prev) => ({
+            ...prev,
+            ...data,
+          }))
+        }
+      } catch (error) {
+        console.error("Error fetching settings:", error)
+      }
+    }
+
+    fetchSettings()
+  }, [])
+
+  const whyChoose = Array.isArray(settings.aboutWhyChoose) && settings.aboutWhyChoose.length > 0
+    ? settings.aboutWhyChoose.map((item: { title: string; description: string }, index: number) => ({
+        ...item,
+        icon: defaultWhyChoose[index]?.icon || defaultWhyChoose[0].icon,
+      }))
+    : defaultWhyChoose
+
   return (
     <main className="min-h-screen flex flex-col">
       <Navbar />
@@ -15,16 +105,14 @@ export default function AboutPage() {
         {/* Hero Banner */}
         <div className="relative h-64 md:h-80 bg-black text-white">
           <Image
-            src="/Classic.png?height=400&width=1920"
-            alt="About Ambrosia Overseas"
+            src={settings.aboutHeroImage}
+            alt={settings.aboutHeroTitle}
             fill
             className="object-cover opacity-60"
           />
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
-            <h1 className="text-3xl md:text-5xl font-bold mb-4">
-              About <span className="gold-text">Ambrosia Overseas</span>
-            </h1>
-            <p className="max-w-2xl text-gray-300">Bringing the finest imported food products to India since 2015.</p>
+            <h1 className="text-3xl md:text-5xl font-bold mb-4">{settings.aboutHeroTitle}</h1>
+            <p className="max-w-2xl text-gray-300">{settings.aboutHeroSubtitle}</p>
           </div>
         </div>
 
@@ -33,28 +121,18 @@ export default function AboutPage() {
           <div className="container px-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <div className="relative h-[400px] rounded-lg overflow-hidden">
-                <Image src="/AmbrosiaOverseas.png?height=800&width=800" alt="Our Story" fill className="object-cover" />
+                <Image src={settings.aboutStoryImage} alt="Our Story" fill className="object-cover" />
               </div>
 
               <div className="space-y-6">
                 <h2 className="text-3xl font-bold">
                   Our <span className="gold-text">Story</span>
                 </h2>
-                <p className="text-muted-foreground">
-                  Ambrosia Overseas was founded in 2024 with a simple mission: to bring the finest imported food
-                  products from around the world to Indian consumers. What started as a small passion project has now
-                  grown into one of India&apos;s leading retailers of gourmet and specialty food items.
-                </p>
-                <p className="text-muted-foreground">
-                  Our founder, Ayansh Jaiswal, traveled extensively and was always fascinated by the diverse flavors and
-                  food products available globally. He noticed a gap in the Indian market for authentic, high-quality
-                  imported foods and decided to bridge this gap by establishing Ambrosia Overseas.
-                </p>
-                <p className="text-muted-foreground">
-                  Today, we source products from over 20 countries, working directly with manufacturers and suppliers to
-                  ensure that only the best products reach our customers. Our extensive range includes beverages,
-                  snacks, cookies, breakfast cereals, protein bars, and more.
-                </p>
+                {settings.aboutStoryParagraphs.map((paragraph: string, index: number) => (
+                  <p key={index} className="text-muted-foreground">
+                    {paragraph}
+                  </p>
+                ))}
               </div>
             </div>
           </div>
@@ -66,10 +144,7 @@ export default function AboutPage() {
             <h2 className="text-3xl font-bold mb-6">
               Our <span className="gold-text">Mission</span>
             </h2>
-            <p className="text-xl max-w-3xl mx-auto text-gray-300">
-              &ldquo;To introduce Indian consumers to the finest global flavors and food products, curated with passion
-              and delivered with excellence.&rdquo;
-            </p>
+            <p className="text-xl max-w-3xl mx-auto text-gray-300">&ldquo;{settings.aboutMission}&rdquo;</p>
           </div>
         </section>
 
@@ -86,28 +161,7 @@ export default function AboutPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {[
-                {
-                  icon: <Award className="h-10 w-10 text-primary" />,
-                  title: "Premium Quality",
-                  description: "We source only the highest quality products from reputable international brands.",
-                },
-                {
-                  icon: <Globe className="h-10 w-10 text-primary" />,
-                  title: "Global Selection",
-                  description: "Explore flavors from around the world, all in one place.",
-                },
-                {
-                  icon: <TrendingUp className="h-10 w-10 text-primary" />,
-                  title: "Exclusive Products",
-                  description: "Access to rare and exclusive imported products not found elsewhere.",
-                },
-                {
-                  icon: <Star className="h-10 w-10 text-primary" />,
-                  title: "Curated Experience",
-                  description: "Each product is carefully selected to ensure exceptional taste and quality.",
-                },
-              ].map((feature, index) => (
+              {whyChoose.map((feature, index) => (
                 <div
                   key={index}
                   className="bg-card p-6 rounded-lg border border-border hover:border-primary/50 transition-all duration-300"
@@ -134,26 +188,7 @@ export default function AboutPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {[
-                {
-                  number: "01",
-                  title: "Sourcing",
-                  description:
-                    "We carefully select products from reputable manufacturers around the world, focusing on quality, authenticity, and uniqueness.",
-                },
-                {
-                  number: "02",
-                  title: "Quality Control",
-                  description:
-                    "Each product undergoes rigorous quality checks to ensure it meets our high standards before being added to our inventory.",
-                },
-                {
-                  number: "03",
-                  title: "Showcase",
-                  description:
-                    "We showcase our premium products through our website and physical displays, providing detailed information about each item.",
-                },
-              ].map((step, index) => (
+              {settings.aboutProcessSteps.map((step: { number: string; title: string; description: string }, index: number) => (
                 <div key={index} className="relative p-6 rounded-lg border border-primary/20 bg-card/10">
                   <div className="absolute -top-5 -left-5 h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">
                     {step.number}
@@ -170,14 +205,10 @@ export default function AboutPage() {
         <section className="py-16 bg-black">
           <div className="container px-4">
             <div className="bg-gradient-to-r from-black via-card to-black p-8 md:p-12 rounded-xl border border-primary/20 text-center">
-              <h2 className="text-3xl font-bold mb-4 text-white">
-                Ready to Explore <span className="gold-text">Premium Flavors?</span>
-              </h2>
-              <p className="text-gray-400 max-w-2xl mx-auto mb-8">
-                Browse our extensive collection of imported food products and discover new flavors today.
-              </p>
+              <h2 className="text-3xl font-bold mb-4 text-white">{settings.aboutCtaTitle}</h2>
+              <p className="text-gray-400 max-w-2xl mx-auto mb-8">{settings.aboutCtaSubtitle}</p>
               <Button asChild size="lg" className="gold-gradient text-black font-semibold">
-                <Link href="/products">View All Products</Link>
+                <Link href={settings.aboutCtaButtonLink}>{settings.aboutCtaButtonText}</Link>
               </Button>
             </div>
           </div>

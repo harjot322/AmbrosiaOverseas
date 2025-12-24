@@ -1,9 +1,18 @@
 import { NextResponse } from "next/server"
 import { Banner } from "@/types/types"
 import { getBanners, createBanner, updateBanner, deleteBanner } from "@/lib/db-service"
+import { getCached, setCached, invalidateCacheByPrefix } from "@/lib/api-cache"
+import { getSession, isAdmin } from "@/lib/auth"
+import { isSameOrigin } from "@/lib/csrf"
+import { logAdminAction } from "@/lib/audit"
 
 export async function GET() {
   try {
+    const cacheKey = "/api/banners"
+    const cached = getCached(cacheKey)
+    if (cached) {
+      return NextResponse.json(cached)
+    }
     const banners: Banner[] = await getBanners().then((result) =>
       result.map((banner) => ({
         _id: banner._id.toString(),
@@ -15,6 +24,7 @@ export async function GET() {
         isActive: banner.isActive,
       }))
     );
+    setCached(cacheKey, banners)
     return NextResponse.json(banners)
   } catch (error) {
     console.error("Error fetching banners:", error)
@@ -24,6 +34,14 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const session = await getSession()
+    if (!session || !isAdmin(session)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    if (!isSameOrigin(request)) {
+      return NextResponse.json({ error: "Invalid CSRF origin" }, { status: 403 })
+    }
+
     const body: Banner = await request.json()
 
     // Validate input
@@ -32,6 +50,15 @@ export async function POST(request: Request) {
     }
 
     const result = await createBanner(body)
+    invalidateCacheByPrefix("/api/banners")
+    invalidateCacheByPrefix("/api/bootstrap")
+    await logAdminAction({
+      session,
+      request,
+      action: "create",
+      resource: "banner",
+      resourceId: String(result.insertedId),
+    })
 
     return NextResponse.json(
       {
@@ -47,10 +74,33 @@ export async function POST(request: Request) {
   }
 }
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: Request) {
   try {
+    const session = await getSession()
+    if (!session || !isAdmin(session)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    if (!isSameOrigin(request)) {
+      return NextResponse.json({ error: "Invalid CSRF origin" }, { status: 403 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get("id")
+    if (!id) {
+      return NextResponse.json({ error: "Banner id is required" }, { status: 400 })
+    }
+
     const body = await request.json()
-    const result = await updateBanner(params.id, body)
+    const result = await updateBanner(id, body)
+    invalidateCacheByPrefix("/api/banners")
+    invalidateCacheByPrefix("/api/bootstrap")
+    await logAdminAction({
+      session,
+      request,
+      action: "update",
+      resource: "banner",
+      resourceId: id,
+    })
 
     if (result.matchedCount === 0) {
       return NextResponse.json({ error: "Banner not found" }, { status: 404 })
@@ -66,9 +116,32 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request) {
   try {
-    const result = await deleteBanner(params.id)
+    const session = await getSession()
+    if (!session || !isAdmin(session)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    if (!isSameOrigin(request)) {
+      return NextResponse.json({ error: "Invalid CSRF origin" }, { status: 403 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get("id")
+    if (!id) {
+      return NextResponse.json({ error: "Banner id is required" }, { status: 400 })
+    }
+
+    const result = await deleteBanner(id)
+    invalidateCacheByPrefix("/api/banners")
+    invalidateCacheByPrefix("/api/bootstrap")
+    await logAdminAction({
+      session,
+      request,
+      action: "delete",
+      resource: "banner",
+      resourceId: id,
+    })
 
     if (result.deletedCount === 0) {
       return NextResponse.json({ error: "Banner not found" }, { status: 404 })

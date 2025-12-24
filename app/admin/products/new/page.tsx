@@ -1,7 +1,7 @@
 "use client";
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Upload, Plus, X, Save } from "lucide-react"
 
@@ -15,11 +15,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
+import type { Category, Tag } from "@/types/types"
+
+const slugify = (value: string) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
 
 interface FormData {
   name: string
   description: string
   category: string
+  subcategory: string
   origin: string
   price: string
   stock: string
@@ -35,6 +44,7 @@ interface FormData {
     fat: string
   }
   ingredients: string
+  longDescription?: string
 }
 
 export default function NewProduct() {
@@ -45,6 +55,7 @@ export default function NewProduct() {
     name: "",
     description: "",
     category: "",
+    subcategory: "",
     origin: "",
     price: "",
     stock: "",
@@ -60,11 +71,59 @@ export default function NewProduct() {
       fat: "",
     },
     ingredients: "",
+    longDescription: "",
   })
 
   const [tagInput, setTagInput] = useState("")
   const [images, setImages] = useState<string[]>([])
+  const [imageUrlInput, setImageUrlInput] = useState("")
   const [loading, setLoading] = useState(false)
+  const [originSelect, setOriginSelect] = useState("")
+  const [originSaving, setOriginSaving] = useState(false)
+  const [categories, setCategories] = useState<Category[]>([])
+  const [originOptions, setOriginOptions] = useState<string[]>([])
+  const [tags, setTags] = useState<Tag[]>([])
+  const [newCategoryName, setNewCategoryName] = useState("")
+  const [newCategorySlug, setNewCategorySlug] = useState("")
+  const [newSubcategoryName, setNewSubcategoryName] = useState("")
+  const [newSubcategorySlug, setNewSubcategorySlug] = useState("")
+
+  const fetchCategories = useCallback(async () => {
+    try {
+      const response = await fetch("/api/categories")
+      const data = await response.json()
+      setCategories(data)
+    } catch (error) {
+      console.error("Error fetching categories:", error)
+    }
+  }, [])
+
+  const fetchOrigins = useCallback(async () => {
+    try {
+      const response = await fetch("/api/origins")
+      const data = await response.json()
+      const originNames = (data || []).map((origin: { name?: string }) => origin?.name).filter(Boolean)
+      setOriginOptions(originNames)
+    } catch (error) {
+      console.error("Error fetching origins:", error)
+    }
+  }, [])
+
+  const fetchTags = useCallback(async () => {
+    try {
+      const response = await fetch("/api/tags")
+      const data = await response.json()
+      setTags(data)
+    } catch (error) {
+      console.error("Error fetching tags:", error)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchCategories()
+    fetchOrigins()
+    fetchTags()
+  }, [fetchCategories, fetchOrigins, fetchTags])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -72,7 +131,11 @@ export default function NewProduct() {
   }
 
   const handleSelectChange = (name: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [name]: value }))
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+      ...(name === "category" ? { subcategory: "" } : null),
+    }))
   }
 
   const handleSwitchChange = (name: string, checked: boolean) => {
@@ -108,9 +171,23 @@ export default function NewProduct() {
   }
 
   const addImage = () => {
-    // In a real app, this would handle file uploads
-    // For this demo, we'll just add a placeholder
-    setImages((prev) => [...prev, `/placeholder.svg?height=400&width=400&text=Image ${prev.length + 1}`])
+    const value = imageUrlInput.trim()
+    if (!value) {
+      return
+    }
+    setImages((prev) => [...prev, value])
+    setImageUrlInput("")
+  }
+
+  const handleImageFiles = (files: FileList | null) => {
+    if (!files || files.length === 0) return
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        setImages((prev) => [...prev, reader.result as string])
+      }
+      reader.readAsDataURL(file)
+    })
   }
 
   const removeImage = (index: number) => {
@@ -122,12 +199,20 @@ export default function NewProduct() {
     setLoading(true)
 
     try {
-      const response = await fetch("/api/products", {
+      const payload = {
+        ...formData,
+        price: Number(formData.price),
+        stock: Number(formData.stock),
+        images,
+        image: images[0] || "",
+      }
+
+      const response = await fetch("/api/products?includeInactive=true", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       })
 
       if (response.ok) {
@@ -150,6 +235,132 @@ export default function NewProduct() {
       setLoading(false)
     }
   }
+
+  const handleCreateOrigin = async () => {
+    const originName = formData.origin.trim()
+    if (!originName) {
+      toast({
+        title: "Origin required",
+        description: "Please enter a country of origin.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const existing = originOptions.find(
+      (origin) => origin.toLowerCase() === originName.toLowerCase(),
+    )
+    if (existing) {
+      setOriginSelect(existing)
+      handleSelectChange("origin", existing)
+      toast({
+        title: "Already exists",
+        description: "That country already exists in origins.",
+      })
+      return
+    }
+
+    setOriginSaving(true)
+    try {
+      const response = await fetch("/api/origins", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: originName, slug: slugify(originName) }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to add origin")
+      }
+
+      setOriginOptions((prev) => [...prev, originName])
+      setOriginSelect(originName)
+      handleSelectChange("origin", originName)
+      toast({
+        title: "Origin added",
+        description: "The country has been added to origins.",
+      })
+    } catch (error) {
+      console.error("Error adding origin:", error)
+      toast({
+        title: "Error",
+        description: "Failed to add origin.",
+        variant: "destructive",
+      })
+    } finally {
+      setOriginSaving(false)
+    }
+  }
+
+  const slugify = (value: string) =>
+    value
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+
+  const handleCreateCategory = async () => {
+    const name = newCategoryName.trim()
+    const slug = newCategorySlug.trim() || slugify(name)
+    if (!name || !slug) return
+
+    try {
+      const response = await fetch("/api/categories", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name, slug, subcategories: [] }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to create category")
+      }
+
+      setNewCategoryName("")
+      setNewCategorySlug("")
+      handleSelectChange("category", slug)
+      await fetchCategories()
+      toast({ title: "Category created", description: `"${name}" is now available.` })
+    } catch (error) {
+      console.error("Error creating category:", error)
+      toast({ title: "Error", description: "Failed to create category.", variant: "destructive" })
+    }
+  }
+
+  const handleCreateSubcategory = async () => {
+    const name = newSubcategoryName.trim()
+    const slug = newSubcategorySlug.trim() || slugify(name)
+    if (!name || !slug || !selectedCategory?._id) return
+
+    try {
+      const updatedSubcategories = [...(selectedCategory.subcategories || []), { id: Date.now(), parentId: selectedCategory._id, name, slug }]
+      const response = await fetch(`/api/categories/${selectedCategory._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ subcategories: updatedSubcategories }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to create subcategory")
+      }
+
+      setNewSubcategoryName("")
+      setNewSubcategorySlug("")
+      handleSelectChange("subcategory", slug)
+      await fetchCategories()
+      toast({ title: "Subcategory created", description: `"${name}" added to ${selectedCategory.name}.` })
+    } catch (error) {
+      console.error("Error creating subcategory:", error)
+      toast({ title: "Error", description: "Failed to create subcategory.", variant: "destructive" })
+    }
+  }
+
+  const selectedCategory = categories.find((category) => category.slug === formData.category)
+  const subcategories = selectedCategory?.subcategories || []
 
   return (
     <div className="p-6 space-y-6">
@@ -198,15 +409,69 @@ export default function NewProduct() {
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="beverages">Beverages</SelectItem>
-                    <SelectItem value="snacks">Snacks</SelectItem>
-                    <SelectItem value="cookies">Cookies & Muffins</SelectItem>
-                    <SelectItem value="cereals">Breakfast Cereals</SelectItem>
-                    <SelectItem value="protein">Protein Bars</SelectItem>
-                    <SelectItem value="taco">Taco Shells</SelectItem>
-                    <SelectItem value="spreads">Spreads</SelectItem>
+                    {categories.length === 0 ? (
+                      <SelectItem value="uncategorized">Uncategorized</SelectItem>
+                    ) : (
+                      categories.map((category) => (
+                        <SelectItem key={category._id} value={category.slug}>
+                          {category.name}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <Input
+                    placeholder="New category name"
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                  />
+                  <Input
+                    placeholder="New category slug"
+                    value={newCategorySlug}
+                    onChange={(e) => setNewCategorySlug(e.target.value)}
+                  />
+                </div>
+                <Button type="button" variant="secondary" onClick={handleCreateCategory}>
+                  Create Category
+                </Button>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="subcategory">Subcategory</Label>
+                <Select
+                  value={formData.subcategory}
+                  onValueChange={(value) => handleSelectChange("subcategory", value)}
+                  disabled={subcategories.length === 0}
+                >
+                  <SelectTrigger id="subcategory">
+                    <SelectValue placeholder={subcategories.length === 0 ? "No subcategories" : "Select subcategory"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {subcategories.map((subcategory) => (
+                      <SelectItem key={subcategory.slug} value={subcategory.slug}>
+                        {subcategory.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <Input
+                    placeholder="New subcategory name"
+                    value={newSubcategoryName}
+                    onChange={(e) => setNewSubcategoryName(e.target.value)}
+                    disabled={!selectedCategory?._id}
+                  />
+                  <Input
+                    placeholder="New subcategory slug"
+                    value={newSubcategorySlug}
+                    onChange={(e) => setNewSubcategorySlug(e.target.value)}
+                    disabled={!selectedCategory?._id}
+                  />
+                </div>
+                <Button type="button" variant="secondary" onClick={handleCreateSubcategory} disabled={!selectedCategory?._id}>
+                  Create Subcategory
+                </Button>
               </div>
 
               <div className="space-y-2">
@@ -243,23 +508,54 @@ export default function NewProduct() {
                 <Label htmlFor="origin">
                   Country of Origin <span className="text-destructive">*</span>
                 </Label>
-                <Select value={formData.origin} onValueChange={(value) => handleSelectChange("origin", value)} required>
+                <Select
+                  value={originSelect}
+                  onValueChange={(value) => {
+                    setOriginSelect(value)
+                    if (value !== "other") {
+                      handleSelectChange("origin", value)
+                    } else {
+                      handleSelectChange("origin", "")
+                    }
+                  }}
+                  required
+                >
                   <SelectTrigger id="origin">
                     <SelectValue placeholder="Select country" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="usa">USA</SelectItem>
-                    <SelectItem value="uk">UK</SelectItem>
-                    <SelectItem value="dubai">Dubai</SelectItem>
-                    <SelectItem value="thailand">Thailand</SelectItem>
-                    <SelectItem value="australia">Australia</SelectItem>
-                    <SelectItem value="new-zealand">New Zealand</SelectItem>
-                    <SelectItem value="mexico">Mexico</SelectItem>
-                    <SelectItem value="italy">Italy</SelectItem>
-                    <SelectItem value="belgium">Belgium</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
+                    {originOptions.length === 0 ? (
+                      <SelectItem value="other">Other</SelectItem>
+                    ) : (
+                      <>
+                        {originOptions.map((origin) => (
+                          <SelectItem key={origin} value={origin}>
+                            {origin}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="other">Other</SelectItem>
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
+                {originSelect === "other" && (
+                  <div className="space-y-2">
+                    <Input
+                      value={formData.origin}
+                      onChange={(e) => handleSelectChange("origin", e.target.value)}
+                      placeholder="Enter country of origin"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCreateOrigin}
+                      disabled={originSaving}
+                    >
+                      {originSaving ? "Adding..." : "Add to origins"}
+                    </Button>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2 md:col-span-2">
@@ -274,6 +570,18 @@ export default function NewProduct() {
                   placeholder="Enter product description"
                   rows={5}
                   required
+                />
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="longDescription">Long Description</Label>
+                <Textarea
+                  id="longDescription"
+                  name="longDescription"
+                  value={formData.longDescription}
+                  onChange={handleChange}
+                  placeholder="Enter detailed product description"
+                  rows={5}
                 />
               </div>
 
@@ -311,6 +619,34 @@ export default function NewProduct() {
                   <Upload className="mr-2 h-4 w-4" />
                   Add Image
                 </Button>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="image-url">Image URL</Label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Input
+                    id="image-url"
+                    value={imageUrlInput}
+                    onChange={(e) => setImageUrlInput(e.target.value)}
+                    placeholder="https://example.com/image.jpg"
+                  />
+                  <Button type="button" variant="secondary" onClick={addImage}>
+                    Add URL
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">Add one image URL at a time.</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="image-upload">Upload Images</Label>
+                <Input
+                  id="image-upload"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => handleImageFiles(e.target.files)}
+                />
+                <p className="text-xs text-muted-foreground">Uploaded images are saved as data URLs.</p>
               </div>
 
               {images.length === 0 ? (
@@ -386,6 +722,26 @@ export default function NewProduct() {
                 ))}
                 {formData.tags.length === 0 && <p className="text-sm text-muted-foreground">No tags added yet.</p>}
               </div>
+
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {tags.map((tag) => (
+                    <Button
+                      key={tag._id}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setFormData((prev) =>
+                          prev.tags.includes(tag.name) ? prev : { ...prev, tags: [...prev.tags, tag.name] },
+                        )
+                      }
+                    >
+                      {tag.name}
+                    </Button>
+                  ))}
+                </div>
+              )}
             </div>
           </TabsContent>
 

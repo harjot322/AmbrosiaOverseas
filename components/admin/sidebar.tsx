@@ -15,7 +15,9 @@ import {
   Tags,
   Layers,
   ImageIcon,
+  Globe,
 } from "lucide-react"
+import { signOut } from "next-auth/react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -45,6 +47,12 @@ const adminRoutes = [
     icon: Tags,
     href: "/admin/tags",
     color: "text-orange-500",
+  },
+  {
+    label: "Origins",
+    icon: Globe,
+    href: "/admin/origins",
+    color: "text-blue-500",
   },
   {
     label: "Banners",
@@ -107,15 +115,15 @@ export function AdminSidebar() {
       </div>
 
       <div className="pt-4 border-t">
-        <Link
-          href="/login"
-          className="flex items-center gap-x-2 text-sm font-medium p-3 hover:bg-destructive/10 rounded-lg transition-all text-muted-foreground"
+        <button
+          type="button"
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          className="w-full flex items-center gap-x-2 text-sm font-medium p-3 hover:bg-destructive/10 rounded-lg transition-all text-muted-foreground"
         >
           <LogOut className="h-5 w-5 text-destructive" />
           {!isCollapsed && <span>Logout</span>}
-        </Link>
+        </button>
       </div>
     </div>
   )
 }
-

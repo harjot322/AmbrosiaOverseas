@@ -1,8 +1,20 @@
 import { NextResponse } from "next/server"
-import { updateCategory, deleteCategory, getCategory, ObjectId } from "@/lib/db-service"
+import { updateCategory, deleteCategory, getCategory } from "@/lib/db-service"
+import { invalidateCacheByPrefix } from "@/lib/api-cache"
+import { getSession, isAdmin } from "@/lib/auth"
+import { isSameOrigin } from "@/lib/csrf"
+import { logAdminAction } from "@/lib/audit"
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const session = await getSession()
+    if (!session || !isAdmin(session)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    if (!isSameOrigin(request)) {
+      return NextResponse.json({ error: "Invalid CSRF origin" }, { status: 403 })
+    }
+
     const { id } = await params
     const body = await request.json()
     const category = await getCategory(id)
@@ -19,6 +31,15 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     }
 
     const result = await updateCategory(id, updatedCategory)
+    invalidateCacheByPrefix("/api/categories")
+    invalidateCacheByPrefix("/api/bootstrap")
+    await logAdminAction({
+      session,
+      request,
+      action: "update",
+      resource: "category",
+      resourceId: id,
+    })
 
     if (result.matchedCount === 0) {
       return NextResponse.json({ error: "Category not found" }, { status: 404 })
@@ -34,10 +55,27 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const session = await getSession()
+    if (!session || !isAdmin(session)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    if (!isSameOrigin(request)) {
+      return NextResponse.json({ error: "Invalid CSRF origin" }, { status: 403 })
+    }
+
     const { id } = await params
     const result = await deleteCategory(id)
+    invalidateCacheByPrefix("/api/categories")
+    invalidateCacheByPrefix("/api/bootstrap")
+    await logAdminAction({
+      session,
+      request,
+      action: "delete",
+      resource: "category",
+      resourceId: id,
+    })
 
     if (result.deletedCount === 0) {
       return NextResponse.json({ error: "Category not found" }, { status: 404 })

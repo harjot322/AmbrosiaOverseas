@@ -1,10 +1,20 @@
 import { NextResponse } from "next/server"
 import { updateCategory, deleteCategory, getCategory, getCategories, createCategory } from "@/lib/db-service"
+import { getCached, setCached, invalidateCacheByPrefix } from "@/lib/api-cache"
 import { ObjectId } from "mongodb"
+import { getSession, isAdmin } from "@/lib/auth"
+import { isSameOrigin } from "@/lib/csrf"
+import { logAdminAction } from "@/lib/audit"
 
 export async function GET() {
   try {
+    const cacheKey = "/api/categories"
+    const cached = getCached(cacheKey)
+    if (cached) {
+      return NextResponse.json(cached)
+    }
     const categories = await getCategories()
+    setCached(cacheKey, categories)
     return NextResponse.json(categories)
   } catch (error) {
     console.error("Error fetching categories:", error)
@@ -14,6 +24,14 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const session = await getSession()
+    if (!session || !isAdmin(session)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    if (!isSameOrigin(request)) {
+      return NextResponse.json({ error: "Invalid CSRF origin" }, { status: 403 })
+    }
+
     const body = await request.json()
     const categoryData = {
       _id: new ObjectId(),
@@ -23,6 +41,15 @@ export async function POST(request: Request) {
     }
 
     const result = await createCategory(categoryData)
+    invalidateCacheByPrefix("/api/categories")
+    invalidateCacheByPrefix("/api/bootstrap")
+    await logAdminAction({
+      session,
+      request,
+      action: "create",
+      resource: "category",
+      resourceId: String(result.insertedId),
+    })
 
     return NextResponse.json(
       {
@@ -38,10 +65,24 @@ export async function POST(request: Request) {
   }
 }
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: Request) {
   try {
+    const session = await getSession()
+    if (!session || !isAdmin(session)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    if (!isSameOrigin(request)) {
+      return NextResponse.json({ error: "Invalid CSRF origin" }, { status: 403 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get("id")
+    if (!id) {
+      return NextResponse.json({ error: "Category id is required" }, { status: 400 })
+    }
+
     const body = await request.json()
-    const category = await getCategory(params.id)
+    const category = await getCategory(id)
 
     if (!category) {
       return NextResponse.json({ error: "Category not found" }, { status: 404 })
@@ -54,7 +95,16 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       subcategories: body.subcategories || category.subcategories,
     }
 
-    const result = await updateCategory(params.id, updatedCategory)
+    const result = await updateCategory(id, updatedCategory)
+    invalidateCacheByPrefix("/api/categories")
+    invalidateCacheByPrefix("/api/bootstrap")
+    await logAdminAction({
+      session,
+      request,
+      action: "update",
+      resource: "category",
+      resourceId: id,
+    })
 
     if (result.matchedCount === 0) {
       return NextResponse.json({ error: "Category not found" }, { status: 404 })
@@ -70,9 +120,32 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request) {
   try {
-    const result = await deleteCategory(params.id)
+    const session = await getSession()
+    if (!session || !isAdmin(session)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    if (!isSameOrigin(request)) {
+      return NextResponse.json({ error: "Invalid CSRF origin" }, { status: 403 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get("id")
+    if (!id) {
+      return NextResponse.json({ error: "Category id is required" }, { status: 400 })
+    }
+
+    const result = await deleteCategory(id)
+    invalidateCacheByPrefix("/api/categories")
+    invalidateCacheByPrefix("/api/bootstrap")
+    await logAdminAction({
+      session,
+      request,
+      action: "delete",
+      resource: "category",
+      resourceId: id,
+    })
 
     if (result.deletedCount === 0) {
       return NextResponse.json({ error: "Category not found" }, { status: 404 })

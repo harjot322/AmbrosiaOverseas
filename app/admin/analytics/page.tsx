@@ -1,8 +1,7 @@
-//This is query page, not Analytics page!
-
+// This is the query page for contact messages.
 "use client"
 
-import { useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { format } from "date-fns"
 import { Mail, Eye, Trash2, Search, Filter, ArrowUpDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -19,58 +18,45 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 
-// Sample message data
-const initialMessages = [
-  {
-    id: 1,
-    name: "John Doe",
-    email: "john.doe@example.com",
-    phone: "+91 9876543210",
-    subject: "Product Information",
-    message: "I would like to know more about your energy drinks. Do you have any sugar-free options available?",
-    read: true,
-    createdAt: "2023-08-15T10:30:00Z",
-  },
-  {
-    id: 2,
-    name: "Jane Smith",
-    email: "jane.smith@example.com",
-    phone: "+91 8765432109",
-    subject: "Business Opportunity",
-    message:
-      "I'm interested in becoming a distributor for your products in Mumbai. Could you please provide more information about your distribution program?",
-    read: false,
-    createdAt: "2023-08-20T14:45:00Z",
-  },
-  {
-    id: 3,
-    name: "Raj Patel",
-    email: "raj.patel@example.com",
-    phone: "+91 7654321098",
-    subject: "Feedback",
-    message:
-      "I recently tried your imported chocolate cookies and they were amazing! The quality and taste are exceptional. Looking forward to trying more products from your collection.",
-    read: false,
-    createdAt: "2023-08-22T09:15:00Z",
-  },
-  {
-    id: 4,
-    name: "Priya Sharma",
-    email: "priya.sharma@example.com",
-    phone: "+91 6543210987",
-    subject: "General Inquiry",
-    message:
-      "Do you have a physical store where I can visit and see your products in person? I'm located in Delhi and would love to check out your collection.",
-    read: true,
-    createdAt: "2023-08-25T16:20:00Z",
-  },
-]
+interface Message {
+  _id: string
+  name: string
+  email: string
+  phone?: string
+  subject: string
+  message: string
+  read: boolean
+  createdAt: string
+}
 
 export default function MessagesPage() {
   const { toast } = useToast()
-  const [messages, setMessages] = useState(initialMessages)
+  const [messages, setMessages] = useState<Message[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedMessage, setSelectedMessage] = useState<(typeof initialMessages)[0] | null>(null)
+  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
+
+  const fetchMessages = useCallback(async () => {
+    try {
+      setLoading(true)
+      const response = await fetch("/api/contact")
+      const data = await response.json()
+      setMessages(data)
+    } catch (error) {
+      console.error("Error fetching messages:", error)
+      toast({
+        title: "Error",
+        description: "Failed to fetch messages",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }, [toast])
+
+  useEffect(() => {
+    fetchMessages()
+  }, [fetchMessages])
 
   const filteredMessages = messages.filter(
     (message) =>
@@ -80,22 +66,40 @@ export default function MessagesPage() {
       message.message.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
-  const handleViewMessage = (message: (typeof initialMessages)[0]) => {
+  const handleViewMessage = async (message: Message) => {
     setSelectedMessage(message)
 
-    // Mark as read if not already
     if (!message.read) {
-      setMessages((prev) => prev.map((m) => (m.id === message.id ? { ...m, read: true } : m)))
+      try {
+        const response = await fetch(`/api/contact/${message._id}`, { method: "PATCH" })
+        if (response.ok) {
+          setMessages((prev) => prev.map((m) => (m._id === message._id ? { ...m, read: true } : m)))
+        }
+      } catch (error) {
+        console.error("Error marking message as read:", error)
+      }
     }
   }
 
-  const handleDeleteMessage = (id: number) => {
-    setMessages((prev) => prev.filter((message) => message.id !== id))
-
-    toast({
-      title: "Message Deleted",
-      description: "The message has been deleted successfully.",
-    })
+  const handleDeleteMessage = async (id: string) => {
+    try {
+      const response = await fetch(`/api/contact/${id}`, { method: "DELETE" })
+      if (!response.ok) {
+        throw new Error("Failed to delete message")
+      }
+      setMessages((prev) => prev.filter((message) => message._id !== id))
+      toast({
+        title: "Message Deleted",
+        description: "The message has been deleted successfully.",
+      })
+    } catch (error) {
+      console.error("Error deleting message:", error)
+      toast({
+        title: "Error",
+        description: "Failed to delete message",
+        variant: "destructive",
+      })
+    }
   }
 
   return (
@@ -139,7 +143,13 @@ export default function MessagesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredMessages.length === 0 ? (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={6} className="h-24 text-center">
+                  Loading messages...
+                </TableCell>
+              </TableRow>
+            ) : filteredMessages.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="h-24 text-center">
                   No messages found.
@@ -147,12 +157,12 @@ export default function MessagesPage() {
               </TableRow>
             ) : (
               filteredMessages.map((message) => (
-                <TableRow key={message.id} className={!message.read ? "bg-muted/30" : undefined}>
+                <TableRow key={message._id} className={!message.read ? "bg-muted/30" : undefined}>
                   <TableCell className="font-medium">{message.name}</TableCell>
                   <TableCell>{message.subject}</TableCell>
                   <TableCell className="hidden md:table-cell">{message.email}</TableCell>
                   <TableCell className="hidden md:table-cell">
-                    {format(new Date(message.createdAt), "MMM d, yyyy")}
+                    {message.createdAt ? format(new Date(message.createdAt), "MMM d, yyyy") : "—"}
                   </TableCell>
                   <TableCell className="text-center">
                     {message.read ? (
@@ -175,7 +185,7 @@ export default function MessagesPage() {
                         variant="ghost"
                         size="icon"
                         className="text-destructive"
-                        onClick={() => handleDeleteMessage(message.id)}
+                        onClick={() => handleDeleteMessage(message._id)}
                       >
                         <Trash2 className="h-4 w-4" />
                         <span className="sr-only">Delete</span>
@@ -224,4 +234,3 @@ export default function MessagesPage() {
     </div>
   )
 }
-

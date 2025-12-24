@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server"
 import { getMessages, createMessage } from "@/lib/db-service"
+import { getSession, isAdmin } from "@/lib/auth"
+import { rateLimit, getClientIp } from "@/lib/rate-limit"
 
 export async function GET() {
   try {
+    const session = await getSession()
+    if (!isAdmin(session)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
     const messages = await getMessages()
     return NextResponse.json(messages)
   } catch (error) {
@@ -13,6 +20,15 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const ip = getClientIp(request)
+    const limit = rateLimit(`contact:${ip}`, 10, 60 * 60 * 1000)
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429 },
+      )
+    }
+
     const body = await request.json()
 
     // Validate input
@@ -35,4 +51,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Failed to send message" }, { status: 500 })
   }
 }
-

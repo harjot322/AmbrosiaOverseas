@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Trash2, ShoppingBag } from "lucide-react"
@@ -9,35 +9,18 @@ import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
+import type { CartItem } from "@/lib/cart"
+import { clearCartItems, getCartItems, removeCartItem, saveCartItems, updateCartItem } from "@/lib/cart"
 
 export default function CartPage() {
   const { toast } = useToast()
-  const [cartItems, setCartItems] = useState([
-    {
-      id: 1,
-      name: "Premium Energy Drink",
-      image: "/placeholder.svg?height=200&width=200",
-      price: 350,
-      quantity: 2,
-      origin: "USA",
-    },
-    {
-      id: 3,
-      name: "Spicy Cheese Snacks",
-      image: "/placeholder.svg?height=200&width=200",
-      price: 250,
-      quantity: 1,
-      origin: "Mexico",
-    },
-    {
-      id: 5,
-      name: "Exotic Fruit Juice",
-      image: "/placeholder.svg?height=200&width=200",
-      price: 280,
-      quantity: 3,
-      origin: "Thailand",
-    },
-  ])
+  const [cartItems, setCartItems] = useState<CartItem[]>([])
+  const [hasHydrated, setHasHydrated] = useState(false)
+
+  useEffect(() => {
+    setCartItems(getCartItems())
+    setHasHydrated(true)
+  }, [])
 
   // Add GST calculation
   const [taxSettings, setTaxSettings] = useState({
@@ -46,14 +29,14 @@ export default function CartPage() {
     pricesIncludeGST: false,
   })
 
-  const updateQuantity = (id: number, newQuantity: number) => {
+  const updateQuantity = (id: string, newQuantity: number) => {
     if (newQuantity < 1) return
 
-    setCartItems((prev) => prev.map((item) => (item.id === id ? { ...item, quantity: newQuantity } : item)))
+    setCartItems(updateCartItem(id, newQuantity))
   }
 
-  const removeItem = (id: number) => {
-    setCartItems((prev) => prev.filter((item) => item.id !== id))
+  const removeItem = (id: string) => {
+    setCartItems(removeCartItem(id))
 
     toast({
       title: "Item Removed",
@@ -62,13 +45,18 @@ export default function CartPage() {
   }
 
   const clearCart = () => {
-    setCartItems([])
+    setCartItems(clearCartItems())
 
     toast({
       title: "Cart Cleared",
       description: "All items have been removed from your cart.",
     })
   }
+
+  useEffect(() => {
+    if (!hasHydrated) return
+    saveCartItems(cartItems)
+  }, [cartItems, hasHydrated])
 
   const subtotal = cartItems.reduce((total, item) => total + item.price * item.quantity, 0)
 
@@ -112,9 +100,9 @@ export default function CartPage() {
                 <div className="space-y-4">
                   {cartItems.map((item) => (
                     <div key={item.id} className="flex gap-4 p-4 border rounded-lg">
-                      <div className="relative h-24 w-24 rounded-md overflow-hidden">
-                        <Image src={item.image || "/placeholder.svg"} alt={item.name} fill className="object-cover" />
-                      </div>
+                        <div className="relative h-24 w-24 rounded-md overflow-hidden">
+                          <Image src={item.image || "/placeholder.svg"} alt={item.name} fill className="object-cover" />
+                        </div>
 
                       <div className="flex-1">
                         <div className="flex justify-between">
