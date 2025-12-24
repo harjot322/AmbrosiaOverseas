@@ -24,7 +24,7 @@ export default function ContactPage() {
     address: "Ambrosia Overseas, 4420 Gali Bahu Ji, Sadar Bazar Delhi-110006",
     contactHeroTitle: "Contact Us",
     contactHeroSubtitle: "We'd love to hear from you. Reach out to us with any questions or inquiries.",
-    contactHeroImage: "/placeholder.svg?height=400&width=1920",
+    contactHeroImage: "/placeholder-logo.png",
     mapLatitude: 28.658979,
     mapLongitude: 77.211914,
   })
@@ -130,7 +130,8 @@ export default function ContactPage() {
             alt="Contact Us"
             fill
             sizes="100vw"
-            className="object-cover opacity-60"
+            className="object-contain opacity-60"
+            priority
           />
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
             <h1 className="text-3xl md:text-5xl font-bold mb-4 heading-premium">
