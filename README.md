@@ -1,68 +1,76 @@
-# Ambrosia Overseas - Luxury Imported Foods Website
+# Ambrosia Overseas — User Guide
 
-This is the codebase for the Ambrosia Overseas website, a luxury showcase site for imported food products.
+Welcome to Ambrosia Overseas, a premium imported foods storefront. This guide explains how customers and admins use the site. It is safe to share publicly.
 
-## File Structure and Content Guide
+## For Customers
 
-### Images and Media
+### Browse Products
+- Go to **Products** to explore the catalog.
+- Use **Search**, **Categories**, **Subcategories**, **Origins**, and **Tags** to filter.
+- Sort by **Featured**, **Newest**, or **Price**.
 
-All images should be placed in the `/public` directory. Here are the key image files you'll need to replace:
+### View Product Details
+- Click **View Details** to open a product page.
+- Review gallery images, description, nutrition, and ingredients.
 
-- `/public/logo.png` - Your company logo (recommended size: 200x200px)
-- `/public/hero-bg.jpg` - Homepage hero background image (recommended size: 1920x1080px)
-- `/public/placeholder.svg` - Default product image placeholder (will be replaced by actual product images)
+### Cart
+- Click the cart icon to view items.
+- Add or remove products as needed.
 
-For product images, you should upload them to:
-- `/public/products/[product-id]/main.jpg` - Main product image
-- `/public/products/[product-id]/1.jpg`, `/public/products/[product-id]/2.jpg`, etc. - Additional product images
+### Account
+- **Sign up / Log in** to save your account.
+- Update your name/phone in **Account Settings**.
+- Use **Forgot Password** to reset your password.
 
-### Text Content
+### Contact
+- Use the **Contact Us** form for questions or inquiries.
 
-Text content is embedded within the React components. Here are the main files containing text that you might want to modify:
+## For Admins
 
-- `app/page.tsx` - Homepage content
-- `app/about/page.tsx` - About Us page content
-- `app/contact/page.tsx` - Contact page content
-- `components/footer.tsx` - Footer content with contact information
+### Access
+Admins log in and use the **Admin Panel** to manage content.  
+Only admin accounts can access the dashboard.
 
-### Configuration
+### Manage Products
+Create, edit, and organize products:
+- Images, price, stock, category, subcategory, origin, tags
+- Toggle **Featured** and **Active** status
 
-- `.env.local` - Environment variables (create this file locally)
-  - `MONGODB_URI` - MongoDB connection string
-  - `JWT_SECRET` - Secret for JWT authentication
+### Manage Categories, Tags, Origins
+Admins can create and update:
+- Categories + subcategories
+- Tags
+- Origin countries
 
+### Banners & Hero Images
+Admins can update images and text for each page:
+- Home Hero
+- Home Featured Tiles
+- Products Page Hero
+- About Page Hero
+- Contact Page Hero
 
-## Adding Products
+### Site Settings
+Update global content such as:
+- Contact details
+- Hero titles/subtitles
+- Footer information
 
-Products can be added through the admin dashboard at `/admin/products/new`. You'll need to:
-1. Fill in the product details
-2. Upload product images
-3. Set categories, tags, and other attributes
+### Messages
+View customer messages from the **Contact Us** form.
 
-## Customization
+### Analytics
+View traffic, top products, and engagement metrics.
 
-### Colors
+## Image Recommendations
 
-The color scheme is defined in `app/globals.css` and `tailwind.config.ts`. The main colors are:
-- Gold: #d4af37
-- Black: #000000
-- Off-white: #fafafa
+For best quality, upload images at these sizes:
+- Home Hero: 1920×900 (16:9)
+- Products/About/Contact Hero: 1920×600 (16:5)
+- Home Featured Tiles: 800×600 (4:3)
 
-### Categories and Filters
+For extra sharpness on large screens, use 2× sizes.
 
-To modify the product categories and filters, edit:
-- `app/products/page.tsx` - Product filters
-- `components/footer.tsx` - Footer categories
+## Support
 
-## Map Integration
-
-The website uses OpenStreetMap for displaying the store location. The map is configured in:
-- `components/open-street-map.tsx` - The OpenStreetMap component
-- `app/contact/page.tsx` - Where the map is displayed
-
-To update the map location, modify the latitude and longitude values in the OpenStreetMap component.
-
-## Deployment
-
-This website is designed to be deployed on Vercel. Connect your GitHub repository to Vercel and set up the environment variables mentioned above.
-
+If you need help, contact the site administrator or the business directly.
